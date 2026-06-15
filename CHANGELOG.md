@@ -15,6 +15,7 @@
 ### Added
 - `preview.yml`: deploys each PR to `gh-pages/pr-preview/pr-<number>/` and posts the preview URL on the PR.
 - Switched production CD to deploy to the `gh-pages` branch (same branch PR previews use).
+- Preview workflow does not wait on Pages API (avoids failure before Pages is enabled).
 
 ### Changed
 - Production CD no longer uses the GitHub Actions Pages artifact flow; both previews and production now use the `gh-pages` branch.
