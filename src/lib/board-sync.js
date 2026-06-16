@@ -55,7 +55,7 @@ export function applyBoard(board, data, setUid) {
   return true;
 }
 
-export function startBoardSync({ data, getUid, setUid, renderAll, onReady }) {
+export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallback }) {
   let boardReady = false;
   let saveTimer = null;
   let saveInFlight = false;
@@ -95,16 +95,18 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady }) {
   }
 
   (async () => {
+    let loaded = false;
     try {
       const res = await fetch("/api/board");
       if (!res.ok) throw new Error("load failed");
-      if (applyBoard(await res.json(), data, setUid)) {
-        boardReady = true;
-        renderAll();
-      }
+      loaded = applyBoard(await res.json(), data, setUid);
+      if (!loaded) console.warn("Board from server rejected, using fallback data.");
     } catch (e) {
       console.warn("Board load skipped, using built-in sample data.", e);
     }
+    if (!loaded && fallback) fallback();
+    if (loaded) boardReady = true;
+    renderAll();
     onReady(scheduleSave);
   })();
 }

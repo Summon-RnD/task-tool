@@ -1,5 +1,14 @@
 # Changelog
 
+## Remove sample-data flash on load (2026-06-16)
+
+### Changed
+- App starts with an empty in-memory board and waits for `GET /api/board` before the first render.
+- Sample tasks moved to `src/data/sample-tasks.js` and used only when the server is unreachable (static `npx serve` mode).
+
+### Reasoning
+- Rendering built-in sample data first, then swapping in the DB board caused a visible flash on every refresh when running `python server.py`.
+
 ## SQLite persistence (2026-06-15)
 
 ### Added

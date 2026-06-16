@@ -53,7 +53,8 @@ npm run test:watch
 | `index.html` | UI markup and styles |
 | `src/app/main.js` | Application logic (DOM, rendering, interactions) |
 | `src/data/constants.js` | Team roster, clients, sizes, colors |
-| `src/lib/board-sync.js` | Server load/save (non-blocking) |
+| `src/data/sample-tasks.js` | Demo tasks for static-only fallback |
+| `src/lib/board-sync.js` | Server load/save (first render after load) |
 | `server.py` | Flask app + SQLite API |
 | `tests/` | Vitest unit tests |
 
