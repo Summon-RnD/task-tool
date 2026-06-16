@@ -8,6 +8,19 @@ describe("project layout", () => {
     expect(html).not.toContain("<script>\n/* ================= sample data");
   });
 
+  it("exports gantt drag handlers to window", () => {
+    const main = readFileSync("src/app/main.js", "utf8");
+    const globalsBlock = main.match(/const _globals = \{([\s\S]*?)\};/);
+    expect(globalsBlock).not.toBeNull();
+    const exported = globalsBlock[1]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const name of ["projDown", "rowDown", "barDown", "openDetail"]) {
+      expect(exported, `${name} must be in _globals for inline handlers`).toContain(name);
+    }
+  });
+
   it("exports core lib modules", async () => {
     const domain = await import("../src/lib/domain.js");
     const tree = await import("../src/lib/tree.js");

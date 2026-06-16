@@ -1555,6 +1555,7 @@ const _globals = {
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
   toggleExp, updTask, refreshBarMenu, addChild, deleteTask, addCapTask, barDown, barContext, pickSearch,
+  projDown, rowDown,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
   doSearch, refreshCard, delCapTask, setTask, setTaskOwner, setTaskSize, setSub, setSubOwner, addSub,
   delSub, commitCapture, toggleListen, stopListen, renderAll, moveTask, setKeyVal,
