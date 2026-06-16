@@ -1559,7 +1559,6 @@ scheduleTodayRefresh();
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") refreshToday();
 });
-
 const _globals = {
   toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,

@@ -1,5 +1,21 @@
 # Changelog
 
+## Rebase conflict resolution (2026-06-16)
+
+### Fixed
+- Resolved rebase conflicts onto `main` (real-time today column + board-sync boot path).
+- Kept `board-sync.js` / empty `DATA` startup (no pre-load flash) while preserving `syncToday`, midnight refresh, and tab visibility refresh from main.
+- Dropped early `renderAll()` before board fetch; first render still happens inside `startBoardSync` after load or fallback.
+
+## Remove sample-data flash on load (2026-06-16)
+
+### Changed
+- App starts with an empty in-memory board and waits for `GET /api/board` before the first render.
+- Sample tasks moved to `src/data/sample-tasks.js` and used only when the server is unreachable (static `npx serve` mode).
+
+### Reasoning
+- Rendering built-in sample data first, then swapping in the DB board caused a visible flash on every refresh when running `python server.py`.
+
 ## Manual new project button (2026-06-16)
 
 ### Added
