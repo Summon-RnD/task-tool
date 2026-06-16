@@ -1,6 +1,6 @@
 import { LEAD } from "../data/constants.js";
 import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js";
-import { barSpan as _barSpan, dayIso, dayN } from "./date-core.js";
+import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js";
 import { flat } from "./tree.js";
 import { taskDone } from "./tree.js";
 
@@ -16,7 +16,7 @@ export function createDateHelpers(today) {
     if (isNaN(s) || isNaN(e) || e < s) return 0;
     let c = 0;
     for (let d = s; d <= e; d++) {
-      const wd = new Date(dayIsoLocal(d)).getDay();
+      const wd = parseLocalIso(dayIsoLocal(d)).getDay();
       if (wd !== 0 && wd !== 6) c++;
     }
     return c;
@@ -87,7 +87,7 @@ export function createDateHelpers(today) {
   }
 
   const fmtD = (iso) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    parseLocalIso(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
   return {
     dayN: dayNLocal,

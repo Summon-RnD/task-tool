@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { calendarToday } from "../src/lib/date-core.js";
 import {
   cap1,
   findDue,
@@ -25,8 +26,9 @@ Install RS03 motors for JCDecaux.`;
   });
 
   it("parses relative due dates", () => {
-    expect(findDue(" due tomorrow ")).toBe("2026-06-13");
-    expect(findDue(" ship in 3 days ")).toBe("2026-06-15");
+    const today = calendarToday(new Date(2026, 5, 12));
+    expect(findDue(" due tomorrow ", today)).toBe("2026-06-13");
+    expect(findDue(" ship in 3 days ", today)).toBe("2026-06-15");
   });
 
   it("resolves owner aliases from transcript text", () => {
