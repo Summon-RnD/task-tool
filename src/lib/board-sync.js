@@ -1,4 +1,5 @@
 import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js";
+import { todayLocalIso } from "./date-core.js";
 import { flat } from "./tree.js";
 
 function maxTaskId(nodes) {
@@ -17,7 +18,7 @@ export function boardPayload(data, getUid) {
     hardware_vocab: HARDWARE_VOCAB,
     domain_rules: DOMAIN_RULES,
     uid: getUid ? getUid() : maxTaskId(data),
-    today: TODAY.toISOString().slice(0, 10),
+    today: todayLocalIso(TODAY),
   };
 }
 
