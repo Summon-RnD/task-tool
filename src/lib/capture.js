@@ -1,10 +1,11 @@
 import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js";
+import { todayLocalIso } from "./date-core.js";
 import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js";
 
 export const cap1 = (s) => (s ? s.replace(/^[a-z]/, (c) => c.toUpperCase()) : s);
 
 export function isoCap(d) {
-  return d.toISOString().slice(0, 10);
+  return todayLocalIso(d);
 }
 
 export function stripCaptions(t) {
