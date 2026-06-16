@@ -1,5 +1,11 @@
 # Changelog
 
+## Rebased onto Summon-RnD/task-manager main (2026-06-16)
+
+### Changed
+- Rebased local `main` onto upstream `3ea07a1` (Summon-RnD/task-manager main).
+- Kept realtime today column on top of board-sync / no-flash boot path already on upstream.
+
 ## Rebase conflict resolution (2026-06-16)
 
 ### Fixed
