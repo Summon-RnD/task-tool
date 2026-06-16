@@ -1,11 +1,9 @@
 import {
-  PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS, DATA,
+  PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS,
   SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
 } from "../data/constants.js";
-import { applyBoard, boardPayload, initBoardDefaults, syncToday } from "../data/board-store.js";
-import { buildSampleTasks } from "../data/sample-tasks.js";
 import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
@@ -17,15 +15,19 @@ import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
 } from "../lib/capture.js";
-import { initApp, scheduleSave } from "../lib/persistence.js";
+import { startBoardSync } from "../lib/board-sync.js";
+import { buildSampleTasks } from "../data/sample-tasks.js";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
    In production this mapping is done by the extraction LLM given the roster,
    plus Whisper initial_prompt biasing ("Team: Jean, Florian, Iannis, …"). */
+const RESP_MAP_TEXT = buildRespMapText();
+const VOCAB_TEXT = buildVocabText();
 
 const { T, setUid, getUid } = createTaskFactory();
-initBoardDefaults(setUid, () => buildSampleTasks(T));
+
+const DATA = [];
 
 const findPath = (id, nodes = DATA, path = []) => findPathIn(id, nodes, path);
 const depthOf = (id) => depthOfIn(id, DATA);
@@ -238,6 +240,14 @@ function syncDateHelpers() {
     rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD } = createDateHelpers(TODAY));
 }
 syncDateHelpers();
+
+function syncToday() {
+  const prev = todayLocalIso(TODAY);
+  const now = calendarToday();
+  TODAY.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
+  TODAY.setHours(0, 0, 0, 0);
+  return prev !== todayLocalIso(TODAY);
+}
 
 function refreshToday() {
   if (!syncToday()) return;
@@ -842,6 +852,15 @@ function addChild(id){ const el=document.getElementById("dSubNew"), v=el.value.t
   if(findPath(id).length>=3) return; // subtasks can't have children
   snap(); const n=findPath(id).pop(); n.children.push(T(cap1(v),n.owner,{d:n.due||null}));
   renderAll(); openDetail(id); }
+function addProject(){
+  snap();
+  const proj=T("New project","fd",{open:true});
+  DATA.push(proj);
+  renderAll();
+  openDetail(proj.id);
+  const ti=document.getElementById("dTitle");
+  if(ti){ ti.focus(); ti.select(); }
+}
 function openDetail(id){
   const path=findPath(id); if(!path) return;
   const n=path[path.length-1], leaf=!n.children.length;
@@ -1034,10 +1053,10 @@ Rules:
 - Task titles are concise imperative phrases with NO leading article — "Clean the bathroom", not "a clean the bathroom". Each item has title, plus owner/due/size if stated (else null), plus a "subs" array (empty if none).
 - SUBTASKS: the word "subtask" ALWAYS means an item inside some existing task's "subs" array — NEVER a new top-level task, no matter how many are added. When the user says "add subtask(s)" / "add N subtasks": if they name or imply a parent ("for the first task", "under clean the bathroom"), use it; if they DON'T name one, attach the subtasks to the LAST task currently in the tasks array. Return that task's complete subs list. Subtasks are leaves (no further subs). Never increase the number of top-level tasks when the user said "subtask".
 - ASSIGNEE INFERENCE: when no owner is explicitly named for a task/subtask, look at the task's CONTENT and assign the teammate whose responsibility best matches it, using this RESPONSIBILITY MAP:
-${buildRespMapText()}
+${RESP_MAP_TEXT}
   Examples: "Install RS03 motor on prototype" → Iannis or Sanket; "Implement obstacle avoidance for the Derichebourg pilot" → Akshat; "Fix D-Wave board power issue" → Leynaïck. Only when nothing in the content maps to a responsibility, fall back to the PROJECT's owner. If the user says "owners same as the project", set every task's and subtask's owner to the project owner (this overrides inference).
 - DOMAIN VOCABULARY — use these EXACT spellings; never invent or mis-spell hardware or client names:
-${buildVocabText()}
+${VOCAB_TEXT}
   Map mis-heard variants to the canonical form (e.g. "RS zero three"/"RS-3" → "RS03", "dwave" → "D-Wave", "jaycee decaux" → "JCDecaux").
 - When the user gives an ordered list of due dates/owners "in that order" for the tasks, apply them positionally to the tasks in their current order.
 - DELETING: you CAN delete. When the user asks to remove/delete a task or subtask (e.g. "delete the two tests you just added", "remove clean the toilet"), put each item's exact current title into the "remove" array. Otherwise "remove" is []. Never say you can't delete.
@@ -1317,8 +1336,8 @@ LANGUAGE: the transcript may be English or French — ALL OUTPUT MUST BE IN ENGL
 - Group work into projects. A customer pilot becomes a project; set its "client" to the matching known client. Pure internal work has client=null.
 - Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (s/m/l/xl or null), client (if the task is for a known client else null), and a subs array (usually empty).
 - ASSIGNEE: infer each owner from this RESPONSIBILITY MAP using the task's content; only null if genuinely unclear:
-${buildRespMapText()}
-${buildVocabText()}
+${RESP_MAP_TEXT}
+${VOCAB_TEXT}
   Use the exact hardware/client spellings above; map mis-hearings to the canonical form.
 - Do NOT re-create work that already exists in context.projects — only return genuinely new items.
 - assistantSay: one short sentence, e.g. "I identified 2 projects and 7 tasks from this conversation."
@@ -1536,27 +1555,27 @@ function renderAll(){ renderFilter(); renderDash();
 }
 Object.defineProperty(window, "CAP", { get: () => CAP, configurable: true });
 
-requestSave = await initApp({
-  applyBoard: (b) => applyBoard(b, setUid),
-  boardPayload: () => boardPayload(getUid),
-  renderAll,
-});
-
-syncDateHelpers();
-renderAll();
 scheduleTodayRefresh();
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") refreshToday();
 });
-
 const _globals = {
   toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
-  toggleExp, updTask, refreshBarMenu, addChild, deleteTask, addCapTask, barDown, barContext, pickSearch,
+  toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
   doSearch, refreshCard, delCapTask, setTask, setTaskOwner, setTaskSize, setSub, setSubOwner, addSub,
   delSub, commitCapture, toggleListen, stopListen, renderAll, moveTask, setKeyVal,
 };
 Object.assign(window, _globals);
+
+startBoardSync({
+  data: DATA,
+  getUid,
+  setUid,
+  renderAll,
+  onReady: (save) => { requestSave = save; },
+  fallback: () => { DATA.splice(0, DATA.length, ...buildSampleTasks(T)); },
+});
