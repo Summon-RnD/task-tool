@@ -6,6 +6,7 @@ describe("project layout", () => {
     const html = readFileSync("index.html", "utf8");
     expect(html).toContain('<script type="module" src="src/app/main.js">');
     expect(html).not.toContain("<script>\n/* ================= sample data");
+    expect(html).toContain('onclick="addProject()"');
   });
 
   it("exports core lib modules", async () => {

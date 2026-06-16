@@ -819,6 +819,15 @@ function addChild(id){ const el=document.getElementById("dSubNew"), v=el.value.t
   if(findPath(id).length>=3) return; // subtasks can't have children
   snap(); const n=findPath(id).pop(); n.children.push(T(cap1(v),n.owner,{d:n.due||null}));
   renderAll(); openDetail(id); }
+function addProject(){
+  snap();
+  const proj=T("New project","fd",{open:true});
+  DATA.push(proj);
+  renderAll();
+  openDetail(proj.id);
+  const ti=document.getElementById("dTitle");
+  if(ti){ ti.focus(); ti.select(); }
+}
 function openDetail(id){
   const path=findPath(id); if(!path) return;
   const n=path[path.length-1], leaf=!n.children.length;
@@ -1518,7 +1527,7 @@ const _globals = {
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
-  toggleExp, updTask, refreshBarMenu, addChild, deleteTask, addCapTask, barDown, barContext, pickSearch,
+  toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
   doSearch, refreshCard, delCapTask, setTask, setTaskOwner, setTaskSize, setSub, setSubOwner, addSub,
   delSub, commitCapture, toggleListen, stopListen, renderAll, moveTask, setKeyVal,

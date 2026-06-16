@@ -1,5 +1,13 @@
 # Changelog
 
+## Manual new project button (2026-06-16)
+
+### Added
+- Sidebar **New project** button (`addProject`) - creates a blank project and opens the detail sheet for naming and adding tasks, with no assistant or chat required.
+
+### Reasoning
+- Tasks and subtasks could already be added manually under existing projects via the detail sheet; top-level projects were only reachable through the assistant or transcript flows.
+
 ## Remove sample-data flash on load (2026-06-16)
 
 ### Changed
