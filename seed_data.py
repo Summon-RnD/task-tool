@@ -122,7 +122,7 @@ def _build_tasks():
         uid += 1
         kids = opts.pop("c", [])
         node = _t(uid, title, owner, **opts)
-        node["children"] = [make(**child) for child in kids]
+        node["children"] = kids
         return node
 
     tasks = [

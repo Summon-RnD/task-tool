@@ -54,9 +54,9 @@ npm run test:watch
 |------|---------|
 | `index.html` | UI markup and styles |
 | `src/app/main.js` | Application logic (DOM, rendering, interactions) |
-| `src/data/board-store.js` | Mutable board state (people, tasks) |
-| `src/data/constants.js` | Static sizing, colors, zoom config |
-| `src/lib/` | Testable pure functions (domain, tree, dates, capture, persistence) |
+| `src/data/constants.js` | Team roster, clients, sizes, colors |
+| `src/data/sample-tasks.js` | Demo tasks for static-only fallback |
+| `src/lib/board-sync.js` | Server load/save (first render after load) |
 | `server.py` | Flask app + SQLite API |
 | `tests/` | Vitest unit tests |
 

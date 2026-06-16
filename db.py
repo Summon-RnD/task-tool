@@ -29,6 +29,10 @@ def init_db():
         row = conn.execute("SELECT data FROM board_state WHERE id = 1").fetchone()
         if row is None:
             save_board(conn, default_board())
+        else:
+            board = json.loads(row["data"])
+            if not board.get("tasks") or not board.get("people"):
+                save_board(conn, default_board())
 
 
 def get_board(conn=None):
@@ -41,7 +45,11 @@ def get_board(conn=None):
             board = default_board()
             save_board(conn, board)
             return board, datetime.now(timezone.utc).isoformat()
-        return json.loads(row["data"]), row["updated_at"]
+        board = json.loads(row["data"])
+        if not board.get("tasks") or not board.get("people"):
+            board = default_board()
+            save_board(conn, board)
+        return board, row["updated_at"]
     finally:
         if own:
             conn.close()
