@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { TODAY } from "../src/data/constants.js";
+import { calendarToday } from "../src/lib/date-core.js";
 import { createDateHelpers } from "../src/lib/dates.js";
 
 describe("dates", () => {
-  const h = createDateHelpers(TODAY);
+  const h = createDateHelpers(calendarToday(new Date(2026, 5, 12)));
 
   it("maps iso dates to day offsets from today", () => {
     expect(h.dayN("2026-06-12")).toBe(0);

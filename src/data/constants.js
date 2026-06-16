@@ -1,3 +1,5 @@
+import { calendarToday } from "../lib/date-core.js";
+
 export const PEOPLE = {
   jn: { name: "Jean", initials: "JN", color: "#27a468", role: "Finances", al: ["jean"] },
   fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Customer outreach, raising money, and recruitment", al: ["florian", "flo", "fluorine", "florine", "florent", "floriane"] },
@@ -8,7 +10,7 @@ export const PEOPLE = {
   ly: { name: "Leynaïck", initials: "LY", color: "#647acb", role: "Electronics (intern)", al: ["leynaïck", "leynaick", "lenaick", "laynaick", "leinaick", "lenix", "laynick"] },
 };
 
-export const TODAY = new Date("2026-06-12");
+export const TODAY = calendarToday();
 
 export const HARDWARE_VOCAB = [
   "Robstride motors: RS00, RS02, RS03, RS04, EL05",

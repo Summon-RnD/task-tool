@@ -10,6 +10,7 @@ import {
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
 } from "../lib/tree.js";
 import { createDateHelpers } from "../lib/dates.js";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
@@ -36,9 +37,9 @@ const fitsDepth = (node, destId) => fitsDepthIn(node, destId, DATA);
 /* size-weighted progress (0..1): done size-points / total size-points across the leaves */
 const progFrac = (n) => { let done = 0, tot = 0; flat([n], (x) => { if (x.children.length) return; const w = SIZE_PTS[x.size || "m"]; tot += w; if (x.done) done += w; }); return tot ? done / tot : 0; };
 function dueChip(due,done){ if(!due||done) return "";
-  const dd=Math.round((new Date(due)-TODAY)/864e5);
+  const dd=Math.round((parseLocalIso(due)-TODAY)/864e5);
   const cls=dd<0?"overdue":dd<=3?"soon":"";
-  const lbl=dd<0?`${-dd}d overdue`:dd===0?"Due today":dd===1?"Due tomorrow":"Due "+new Date(due).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  const lbl=dd<0?`${-dd}d overdue`:dd===0?"Due today":dd===1?"Due tomorrow":"Due "+parseLocalIso(due).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
   return `<span class="chip due ${cls}">${lbl}</span>`; }
 const prChip=p=>({high:'<span class="chip p-high">High</span>',med:'<span class="chip p-med">Medium</span>',low:'<span class="chip p-low">Low</span>'})[p];
 const av=(pid,cls="sm")=>{const p=PEOPLE[pid];return p.photo
@@ -109,7 +110,7 @@ function renderDash(){
   const inView=(n,depth)=>SCALE_SUB?!n.children.length:depth===1;
   const mine=[];
   flat(DATA,(n,depth,path)=>{ if(!inView(n,depth)||!want(n.owner)||taskDone(n)) return;
-    const dd=n.due?Math.round((new Date(n.due)-TODAY)/864e5):null;
+    const dd=n.due?Math.round((parseLocalIso(n.due)-TODAY)/864e5):null;
     mine.push({n,proj:(path[0]||n).title,dd,dn:false});
   });
   // balance scale over the selected time window: outstanding work weighs the left arm,
@@ -121,7 +122,7 @@ function renderDash(){
   const banked=[];
   flat(DATA,(n,depth,path)=>{ if(!inView(n,depth)||!want(n.owner)||!taskDone(n)) return;
     const da=taskDoneAt(n); if(!da) return;
-    const ago=Math.round((TODAY-new Date(da))/864e5);
+    const ago=Math.round((TODAY-parseLocalIso(da))/864e5);
     if(ago>=0&&ago<=Math.max(HZ,0)) banked.push({n,proj:(path[0]||n).title,dn:true}); });
   const PT=x=>SIZE_PTS[x.n.size||"m"];
   const pill=(x,cls,side)=>`<div class="pill ${cls} side-${side} sz-${x.n.size||'m'}" data-full="${x.n.title} — ${PEOPLE[x.n.owner].name} · ${x.proj}">
@@ -232,10 +233,42 @@ function sizeScale(){
    (right). The window scrolls horizontally; zoom buttons set how many days fit on screen. */
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
-const {
-  dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD,
-} = createDateHelpers(TODAY);
+let dayN, dayIso, barSpan, workDays, barColor, barGeom,
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD;
+function syncDateHelpers() {
+  ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD } = createDateHelpers(TODAY));
+}
+syncDateHelpers();
+
+function syncToday() {
+  const prev = todayLocalIso(TODAY);
+  const now = calendarToday();
+  TODAY.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
+  TODAY.setHours(0, 0, 0, 0);
+  return prev !== todayLocalIso(TODAY);
+}
+
+function refreshToday() {
+  if (!syncToday()) return;
+  syncDateHelpers();
+  renderAll();
+}
+
+function msUntilMidnight() {
+  const now = new Date();
+  const next = calendarToday(now);
+  next.setDate(next.getDate() + 1);
+  next.setHours(0, 0, 0, 100);
+  return next - now;
+}
+
+function scheduleTodayRefresh() {
+  setTimeout(() => {
+    refreshToday();
+    scheduleTodayRefresh();
+  }, msUntilMidnight());
+}
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
 /* a parent task's bar always spans its subtasks (start = earliest sub start, due = latest sub due),
@@ -302,10 +335,10 @@ function renderGantt(){
   // calendar axis: month headers + one weekday-letter + number per day (weekly when too tight)
   const showDaily=dayPx>=20;
   const months=[]; let lastM=-1;
-  for(let d=0;d<=R1G;d++){ const dt=new Date(dayIso(d)), m=dt.getFullYear()*12+dt.getMonth();
+  for(let d=0;d<=R1G;d++){ const dt=parseLocalIso(dayIso(d)), m=dt.getFullYear()*12+dt.getMonth();
     if(m!==lastM){ lastM=m; months.push({d,label:dt.toLocaleDateString("en-GB",{month:"short",year:"numeric"})}); } }
   const dticks=[];
-  for(let d=0;d<=R1G;d++){ const dt=new Date(dayIso(d)), wknd=dt.getDay()%6===0;
+  for(let d=0;d<=R1G;d++){ const dt=parseLocalIso(dayIso(d)), wknd=dt.getDay()%6===0;
     if(showDaily||dt.getDay()===1||d===0) dticks.push({d,wd:"SMTWTFS"[dt.getDay()],num:dt.getDate(),wknd,today:d===0}); }
   const zoomEl=document.getElementById("gzoom");
   if(zoomEl){ // build once; afterwards only toggle classes (keeps the clicked button alive)
@@ -325,15 +358,15 @@ function renderGantt(){
   }
   // calendar grid: faint day lines, firmer Monday lines, alternate weeks washed
   const wk=[0];
-  for(let d=1;d<=R1G;d++) if(new Date(dayIso(d)).getDay()===1) wk.push(d);
+  for(let d=1;d<=R1G;d++) if(parseLocalIso(dayIso(d)).getDay()===1) wk.push(d);
   wk.push(R1G);
   const deco=[];
   for(let i=0;i<wk.length-1;i++) if(i%2===1)
     deco.push(`<div class="gwkband" style="left:${gx(wk[i])}%;width:${gx(wk[i+1])-gx(wk[i])}%"></div>`);
-  for(let d=1;d<R1G;d++){ const mon=new Date(dayIso(d)).getDay()===1;
+  for(let d=1;d<R1G;d++){ const mon=parseLocalIso(dayIso(d)).getDay()===1;
     deco.push(`<div class="${mon?'gweek':'gday'}" style="left:${gx(d)}%"></div>`); }
   months.forEach(m=>{ if(m.d>0) deco.push(`<div class="gmonthline" style="left:${gx(m.d)}%"></div>`); });
-  const td=new Date(dayIso(0));
+  const td=parseLocalIso(dayIso(0));
   const ord=n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
   const todayStr="Today, "+td.toLocaleDateString("en-GB",{weekday:"long"})+" "+ord(td.getDate())+" "+td.toLocaleDateString("en-GB",{month:"long"});
   const todayMid=(gx(0)+gx(1))/2;
@@ -772,7 +805,7 @@ function moveTask(id,dest){ snap();
   if(moveInto(id,+dest)){ renderAll(); openDetail(id); } else UNDO.pop(); }
 
 function toggleDone(id){ snap(); const n=findPath(id).pop();
-  const stamp=x=>x.doneAt=x.done?TODAY.toISOString().slice(0,10):null;
+  const stamp=x=>x.doneAt=x.done?todayLocalIso(TODAY):null;
   if(!n.children.length){ n.done=!n.done; stamp(n); }
   else { const target=pct(n)!==100; flat([n],x=>{if(!x.children.length){x.done=target;stamp(x);}}); }
   renderAll(); }
@@ -1521,6 +1554,11 @@ function renderAll(){ renderFilter(); renderDash();
     requestAnimationFrame(kickHover); // re-evaluate hover after every re-render
 }
 Object.defineProperty(window, "CAP", { get: () => CAP, configurable: true });
+
+scheduleTodayRefresh();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshToday();
+});
 
 const _globals = {
   toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
