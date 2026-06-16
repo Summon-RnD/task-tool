@@ -1,7 +1,7 @@
-import { PEOPLE } from "./board-store.js";
+import { PEOPLE } from "./constants.js";
 
 export function buildSampleTasks(T) {
-  const tasks = [
+  const data = [
     T("Derichebourg pilot - sorting robot", "ia", { p: "high", d: "2026-07-10", open: true, c: [
       T("Integrate RS03 drive motors", "sk", { p: "high", d: "2026-06-16", s: "l", open: true, c: [
         T("Mount RS03 motors and couplers", "sk", { done: true, d: "2026-06-08", s: "m" }),
@@ -64,19 +64,14 @@ export function buildSampleTasks(T) {
     ] }),
   ];
 
-  sprinkleSubtaskOwners(tasks);
-  return tasks;
-}
-
-function sprinkleSubtaskOwners(nodes) {
   let seed = 7;
   const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
   const keys = Object.keys(PEOPLE);
-  const walk = (list, parent, depth) => list.forEach((n) => {
-    if (depth >= 2 && parent) {
-      n.owner = rnd() < 0.7 ? parent.owner : keys[Math.floor(rnd() * keys.length)];
-    }
+  const walk = (nodes, parent, depth) => nodes.forEach((n) => {
+    if (depth >= 2 && parent) n.owner = rnd() < 0.7 ? parent.owner : keys[Math.floor(rnd() * keys.length)];
     walk(n.children, n, depth + 1);
   });
-  walk(nodes, null, 0);
+  walk(data, null, 0);
+
+  return data;
 }
