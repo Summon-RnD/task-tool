@@ -1,5 +1,7 @@
 # Task Management Tool
 
+hello team
+
 TaskBoard prototype: a single-page task planner with gantt timeline, balance-scale dashboard, voice capture, and transcript extraction. SQLite-backed persistence when served via `server.py`.
 
 AI-perc:47%
