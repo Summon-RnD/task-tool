@@ -849,10 +849,19 @@ function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
 function deleteTask(id){ const n=findPath(id).pop();
   if(typeof confirm!=="undefined"&&!confirm('Delete "'+n.title+'"'+(n.children.length?" and its subtasks":"")+"?")) return;
   snap(); detach(id); closeSheet(); renderAll(); }
-function addChild(id){ const el=document.getElementById("dSubNew"), v=el.value.trim(); if(!v) return;
-  if(findPath(id).length>=3) return; // subtasks can't have children
-  snap(); const n=findPath(id).pop(); n.children.push(T(cap1(v),n.owner,{d:n.due||null}));
-  renderAll(); openDetail(id); }
+function addChild(id){
+  const el=document.getElementById("dSubNew");
+  if(!el) return;
+  const v=el.value.trim();
+  if(!v) return;
+  const path=findPath(id);
+  if(!path||path.length>=3) return;
+  snap();
+  const n=path[path.length-1];
+  n.children.push(T(cap1(v),n.owner,{d:n.due||null}));
+  renderAll();
+  openDetail(id);
+}
 function addProject(){
   snap();
   const proj=T("New project","fd",{open:true});
@@ -862,8 +871,11 @@ function addProject(){
   const ti=document.getElementById("dTitle");
   if(ti){ ti.focus(); ti.select(); }
 }
+let DETAIL_ID=null;
 function openDetail(id){
-  const path=findPath(id); if(!path) return;
+  const path=findPath(id);
+  if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
+  DETAIL_ID=id;
   const n=path[path.length-1], leaf=!n.children.length;
   document.getElementById("dCrumb").innerHTML=path.length>1
     ?path.slice(0,-1).map(x=>`<button onclick="openDetail(${x.id})">${x.title}</button>`).join(" › ")+" ›"
@@ -904,12 +916,14 @@ function openDetail(id){
         ${ownerPill(ch.owner,`updTask(${ch.id},'owner',this.value,true);openDetail(${id})`)}
         ${szCtl}
         ${dueChip(ch.due,lleaf&&ch.done)}</div>`;}).join("")}
-    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…"><button onclick="addChild(${id})">Add</button></div>`}
+    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();addChild(${id});}"><button type="button" onclick="addChild(${id})">Add</button></div>`}
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
 }
-function closeSheet(){ document.getElementById("tmodal").classList.remove("show");
+function closeSheet(){ DETAIL_ID=null;
+  document.getElementById("tmodal").classList.remove("show");
   document.getElementById("scrim").classList.remove("show"); }
 
 /* ================= conversational capture ================= */
@@ -1579,6 +1593,14 @@ startBoardSync({
   getUid,
   setUid,
   renderAll,
-  onReady: (save) => { requestSave = save; },
+  hasLocalEdits: () => UNDO.length > 0,
+  onReady: (save) => {
+    requestSave = save;
+    if(DETAIL_ID!=null){
+      const path=findPath(DETAIL_ID);
+      if(path) openDetail(DETAIL_ID);
+      else closeSheet();
+    }
+  },
   fallback: () => { DATA.splice(0, DATA.length, ...buildSampleTasks(T)); },
 });
