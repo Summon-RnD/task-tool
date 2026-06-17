@@ -73,4 +73,38 @@ describe("board-sync", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("startBoardSync keeps local edits made while the board is loading", async () => {
+    const data = [T("User project", "fd", { d: "2026-06-20" })];
+    const renderAll = vi.fn();
+    const onReady = vi.fn();
+    const fallback = vi.fn();
+    const board = {
+      people: { fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Lead", al: [] } },
+      tasks: [T("Server project", "fd", { d: "2026-06-20", c: [T("Task", "fd", { d: "2026-06-18" })] })],
+      uid: 2,
+    };
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => board,
+    }));
+
+    startBoardSync({
+      data,
+      getUid: () => 1,
+      setUid,
+      renderAll,
+      onReady,
+      fallback,
+      hasLocalEdits: () => true,
+    });
+    await vi.waitFor(() => expect(renderAll).toHaveBeenCalledTimes(1));
+    expect(data).toHaveLength(1);
+    expect(data[0].title).toBe("User project");
+    expect(fallback).not.toHaveBeenCalled();
+    expect(onReady).toHaveBeenCalledOnce();
+
+    vi.unstubAllGlobals();
+  });
 });

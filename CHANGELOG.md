@@ -1,5 +1,15 @@
 # Changelog
 
+## Fix manual task add button (2026-06-17)
+
+### Fixed
+- Board sync no longer overwrites projects or tasks added manually while the server board is still loading.
+- Manual **Add** in the detail sheet no longer throws when the open task was removed during sync; the sheet closes or refreshes instead.
+- Enter key submits the manual task input; saves are enabled after sync even when using fallback data.
+
+### Reasoning
+- `startBoardSync` replaced in-memory `DATA` when the fetch completed, so quick manual adds (New project + Add task) disappeared and the Add handler could crash on a stale id.
+
 ## Fix blank screen on boot (2026-06-17)
 
 ### Fixed

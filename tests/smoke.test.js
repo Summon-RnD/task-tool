@@ -17,7 +17,7 @@ describe("project layout", () => {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    for (const name of ["projDown", "rowDown", "barDown", "openDetail"]) {
+    for (const name of ["projDown", "rowDown", "barDown", "openDetail", "addChild", "addProject"]) {
       expect(exported, `${name} must be in _globals for inline handlers`).toContain(name);
     }
   });

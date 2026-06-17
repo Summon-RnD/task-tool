@@ -77,7 +77,7 @@ async function fetchBoard() {
   }
 }
 
-export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallback }) {
+export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallback, hasLocalEdits }) {
   let boardReady = false;
   let saveTimer = null;
   let saveInFlight = false;
@@ -96,7 +96,7 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
       renderAll();
     } catch (e) {
       console.error("Board render failed, using fallback data.", e);
-      useFallback();
+      if (!hasLocalEdits?.()) useFallback();
       renderAll();
     }
   };
@@ -134,14 +134,22 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
 
   (async () => {
     let loaded = false;
+    let board = null;
     try {
-      loaded = applyBoard(await fetchBoard(), data, setUid);
-      if (!loaded) console.warn("Board from server rejected, using fallback data.");
+      board = await fetchBoard();
     } catch (e) {
       console.warn("Board load skipped, using built-in sample data.", e);
     }
-    if (!loaded) useFallback();
-    if (loaded) boardReady = true;
+
+    const keepLocal = hasLocalEdits?.() ?? false;
+    if (keepLocal) {
+      console.info("Keeping local edits made while the board was loading.");
+    } else if (board) {
+      loaded = applyBoard(board, data, setUid);
+      if (!loaded) console.warn("Board from server rejected, using fallback data.");
+    }
+    if (!loaded && !keepLocal) useFallback();
+    boardReady = true;
     safeRender();
     onReady(scheduleSave);
   })();
