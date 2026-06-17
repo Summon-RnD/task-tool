@@ -20,6 +20,7 @@ export function parseLocalIso(iso) {
 }
 
 export function dayN(iso, today) {
+  if (!iso) return NaN;
   return Math.round((parseLocalIso(iso) - today) / 864e5);
 }
 
@@ -30,6 +31,8 @@ export function dayIso(d, today) {
 }
 
 export function barSpan(n, today, lead) {
+  const span = (lead[n.size || "m"] || 3) - 1;
+  if (!n.due) return { s: -span, e: 0 };
   const e = dayN(n.due, today);
-  return { s: n.start ? dayN(n.start, today) : e - (lead[n.size || "m"] - 1), e };
+  return { s: n.start ? dayN(n.start, today) : e - span, e };
 }
