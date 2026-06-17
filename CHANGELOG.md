@@ -20,6 +20,16 @@
 ### Reasoning
 - `#vmodal` is full-screen at z-index 60 (sidebar is 45) and was intercepting clicks even with a transparent background.
 
+## Fix New project render crash (2026-06-17)
+
+### Fixed
+- **New project** no longer crashes the gantt when the project has no due date (detail sheet now opens and **Add** works).
+- Manual tasks get a default due date so they appear on the timeline immediately.
+- `barSpan` tolerates missing due dates instead of throwing during render.
+
+### Reasoning
+- `addProject()` created a due-less project; `rollupSpan` called `barSpan`, which called `parseLocalIso(null)` and aborted `renderAll()` before `openDetail()` ran.
+
 ## Fix blank screen on boot (2026-06-17)
 
 ### Fixed

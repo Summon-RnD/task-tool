@@ -860,13 +860,15 @@ function addChild(id){
   if(!path||path.length>=3) return;
   snap();
   const n=path[path.length-1];
-  n.children.push(T(cap1(v),n.owner,{d:n.due||null}));
+  const taskDue=n.due||dayIso(LEAD.m);
+  n.children.push(T(cap1(v),n.owner,{d:taskDue,s:"m"}));
+  n.open=true;
   renderAll();
   openDetail(id);
 }
 function addProject(){
   snap();
-  const proj=T("New project","fd",{open:true});
+  const proj=T("New project","fd",{d:dayIso(LEAD.l),open:true});
   DATA.push(proj);
   renderAll();
   openDetail(proj.id);
