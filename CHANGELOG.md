@@ -1,5 +1,16 @@
 # Changelog
 
+## Fix blank screen on boot (2026-06-17)
+
+### Fixed
+- Render the gantt shell immediately on load instead of waiting for `/api/board` (empty chart area looked like a blank screen on slow networks).
+- Reject persisted boards whose tasks reference unknown owners; recover with sample fallback if rendering still fails.
+- Add a 10s fetch timeout so a hung API does not leave the UI empty indefinitely.
+
+### Reasoning
+- The no-flash boot path deferred the first `renderAll()` until after the board fetch, so `#gantt` stayed empty until the server responded.
+- A corrupt owner id on a loaded board threw inside `renderGantt`, which aborted the first render and left the page blank.
+
 ## Rebased onto Summon-RnD/task-manager main (2026-06-16)
 
 ### Changed
