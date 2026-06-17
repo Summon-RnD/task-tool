@@ -10,6 +10,16 @@
 ### Reasoning
 - `startBoardSync` replaced in-memory `DATA` when the fetch completed, so quick manual adds (New project + Add task) disappeared and the Add handler could crash on a stale id.
 
+## Fix sidebar blocked after offline mode (2026-06-17)
+
+### Fixed
+- Left sidebar stays clickable while the assistant capture panel is open (including after **Offline mode** on the ChatGPT key dialog).
+- Escape dismisses the API key dialog without closing the whole assistant.
+- Hover reflow no longer leaves `pointer-events: none` stuck on the page body.
+
+### Reasoning
+- `#vmodal` is full-screen at z-index 60 (sidebar is 45) and was intercepting clicks even with a transparent background.
+
 ## Fix blank screen on boot (2026-06-17)
 
 ### Fixed

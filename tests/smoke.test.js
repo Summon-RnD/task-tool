@@ -7,6 +7,7 @@ describe("project layout", () => {
     expect(html).toContain('<script type="module" src="src/app/main.js">');
     expect(html).not.toContain("<script>\n/* ================= sample data");
     expect(html).toContain('onclick="addProject()"');
+    expect(html).toContain("#vmodal.show .capwrap,#vmodal.show .caprestore{pointer-events:auto}");
   });
 
   it("exports gantt drag handlers to window", () => {

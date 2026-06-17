@@ -56,7 +56,9 @@ function undo(){ if(!UNDO.length) return;
   DATA.splice(0,DATA.length,...JSON.parse(UNDO.pop()));
   closeSheet(); ding(0); renderAll(); requestSave(); }
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){ closeSheet(); closeCapture(); closeTeam(); closeBarMenu(); closeTranscript(); closeReview(); hideTip(); return; }
+  if(e.key==="Escape"){
+    if($id("keyModal")?.classList.contains("show")){ skipKey(); return; }
+    closeSheet(); closeCapture(); closeTeam(); closeBarMenu(); closeTranscript(); closeReview(); hideTip(); return; }
   if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==="z"){
     if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // let fields keep their own undo
     e.preventDefault(); undo(); }});
@@ -508,10 +510,10 @@ function renderGantt(){
 function kickHover(){
   try{
     document.body.style.pointerEvents="none";
-    void document.body.offsetHeight;          // force synchronous reflow → refresh native :hover
-    document.body.style.pointerEvents="";
+    void document.body.offsetHeight;
   }catch(e){}
-  if(typeof tipEl!=="undefined" && tipEl && !tipEl.isConnected) hideTip(); // hovered bar was replaced
+  finally{ document.body.style.pointerEvents=""; }
+  if(typeof tipEl!=="undefined" && tipEl && !tipEl.isConnected) hideTip();
 }
 /* keep project names visible: if a flag's pole is outside the scrolled viewport,
    pin the flag to the nearest edge with an arrow; it snaps back when the pole returns */
@@ -1019,7 +1021,7 @@ function askKey(){ const has=!!getKey();
   $id("keyModal").classList.add("show"); setTimeout(()=>$id("keyInput").focus(),50); }
 function saveKey(){ const v=$id("keyInput").value.trim(); if(v) setKeyVal(v);
   $id("keyInput").value=""; $id("keyModal").classList.remove("show"); updateKeyBadge(); }
-function skipKey(){ $id("keyModal").classList.remove("show"); }
+function skipKey(){ $id("keyModal").classList.remove("show"); setTimeout(()=>$id("capInput")?.focus(),50); }
 function clearKey(){ setKeyVal(""); $id("keyModal").classList.remove("show"); updateKeyBadge(); }
 function updateKeyBadge(){ const b=$id("keyBtn"); if(b) b.textContent=getKey()?"🔑 GPT on":"🔑 Key"; }
 
