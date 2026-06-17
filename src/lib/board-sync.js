@@ -36,6 +36,13 @@ export function applyBoard(board, data, setUid) {
   });
   if (!leaves || withDue < leaves * 0.3) return false;
 
+  const peopleKeys = new Set(Object.keys(board.people || {}));
+  let badOwner = false;
+  flat(board.tasks, (n) => {
+    if (n.owner && !peopleKeys.has(n.owner)) badOwner = true;
+  });
+  if (badOwner) return false;
+
   Object.keys(PEOPLE).forEach((k) => delete PEOPLE[k]);
   Object.assign(PEOPLE, board.people);
 
@@ -56,6 +63,20 @@ export function applyBoard(board, data, setUid) {
   return true;
 }
 
+const LOAD_TIMEOUT_MS = 10000;
+
+async function fetchBoard() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), LOAD_TIMEOUT_MS);
+  try {
+    const res = await fetch("/api/board", { signal: ctrl.signal });
+    if (!res.ok) throw new Error("load failed");
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallback }) {
   let boardReady = false;
   let saveTimer = null;
@@ -63,6 +84,22 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
   let saveQueued = false;
 
   const payload = () => boardPayload(data, getUid);
+
+  const useFallback = () => {
+    if (!fallback) return;
+    data.splice(0, data.length);
+    fallback();
+  };
+
+  const safeRender = () => {
+    try {
+      renderAll();
+    } catch (e) {
+      console.error("Board render failed, using fallback data.", e);
+      useFallback();
+      renderAll();
+    }
+  };
 
   const doSave = async () => {
     if (!boardReady) return;
@@ -98,16 +135,14 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
   (async () => {
     let loaded = false;
     try {
-      const res = await fetch("/api/board");
-      if (!res.ok) throw new Error("load failed");
-      loaded = applyBoard(await res.json(), data, setUid);
+      loaded = applyBoard(await fetchBoard(), data, setUid);
       if (!loaded) console.warn("Board from server rejected, using fallback data.");
     } catch (e) {
       console.warn("Board load skipped, using built-in sample data.", e);
     }
-    if (!loaded && fallback) fallback();
+    if (!loaded) useFallback();
     if (loaded) boardReady = true;
-    renderAll();
+    safeRender();
     onReady(scheduleSave);
   })();
 }

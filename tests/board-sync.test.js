@@ -25,6 +25,17 @@ describe("board-sync", () => {
     expect(data[0].title).toBe("Server project");
   });
 
+  it("applyBoard rejects tasks that reference unknown owners", () => {
+    const data = [T("Local", "fd", { d: "2026-06-20" })];
+    const board = {
+      people: { fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Lead", al: [] } },
+      tasks: [T("Bad owner", "missing", { d: "2026-06-20", c: [T("Leaf", "missing", { d: "2026-06-18" })] })],
+      uid: 2,
+    };
+    expect(applyBoard(board, data, setUid)).toBe(false);
+    expect(data[0].title).toBe("Local");
+  });
+
   it("startBoardSync renders once after loading from the server", async () => {
     const data = [];
     const renderAll = vi.fn();

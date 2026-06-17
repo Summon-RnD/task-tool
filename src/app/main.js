@@ -42,7 +42,8 @@ function dueChip(due,done){ if(!due||done) return "";
   const lbl=dd<0?`${-dd}d overdue`:dd===0?"Due today":dd===1?"Due tomorrow":"Due "+parseLocalIso(due).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
   return `<span class="chip due ${cls}">${lbl}</span>`; }
 const prChip=p=>({high:'<span class="chip p-high">High</span>',med:'<span class="chip p-med">Medium</span>',low:'<span class="chip p-low">Low</span>'})[p];
-const av=(pid,cls="sm")=>{const p=PEOPLE[pid];return p.photo
+const person=(id)=>PEOPLE[id]||{name:"Unknown",initials:"?",color:"#aeb4bf",role:""};
+const av=(pid,cls="sm")=>{const p=person(pid);return p.photo
   ? `<span class="av ${cls}" style="background-image:url(${p.photo});background-size:cover;background-position:center"></span>`
   : `<span class="av ${cls}" style="background:${p.color}">${p.initials}</span>`;};
 const GRIP_SVG='<svg width="11" height="17" viewBox="0 0 11 17" fill="currentColor"><circle cx="2.2" cy="2.5" r="1.8"/><circle cx="2.2" cy="8.5" r="1.8"/><circle cx="2.2" cy="14.5" r="1.8"/><circle cx="8.8" cy="2.5" r="1.8"/><circle cx="8.8" cy="8.5" r="1.8"/><circle cx="8.8" cy="14.5" r="1.8"/></svg>';
@@ -125,7 +126,7 @@ function renderDash(){
     const ago=Math.round((TODAY-parseLocalIso(da))/864e5);
     if(ago>=0&&ago<=Math.max(HZ,0)) banked.push({n,proj:(path[0]||n).title,dn:true}); });
   const PT=x=>SIZE_PTS[x.n.size||"m"];
-  const pill=(x,cls,side)=>`<div class="pill ${cls} side-${side} sz-${x.n.size||'m'}" data-full="${x.n.title} — ${PEOPLE[x.n.owner].name} · ${x.proj}">
+  const pill=(x,cls,side)=>`<div class="pill ${cls} side-${side} sz-${x.n.size||'m'}" data-full="${x.n.title} — ${person(x.n.owner).name} · ${x.proj}">
       <button class="pop ${x.dn?'on':''}" onclick="ding(4);toggleDone(${x.n.id})" aria-label="${x.dn?'Undo':'Mark done'}">${x.dn?'✓':''}</button>
       <button class="pbody" onclick="openDetail(${x.n.id})"><span class="t">${x.n.title}</span></button>
       ${av(x.n.owner,"xs")}
@@ -395,7 +396,7 @@ function renderGantt(){
       ? `background-color:${col};background-image:linear-gradient(90deg,rgba(0,0,0,.26) 0 ${donePct}%,rgba(0,0,0,0) ${donePct}% 100%)`
       : `background:${col}`;
     const tip=`${n.title} · ${SIZE_NAMES[sz]} · ${fmtD(dayIso(e))}${late?' (late)':''}${hasKids?` · ${donePct}% done`:""}`+(ctx
-      ?` — ${ctx.proj}${ctx.parent?" › "+ctx.parent:""} · ${({high:"high",med:"medium",low:"low"})[n.priority||"med"]} priority · ${PEOPLE[n.owner].name}`
+      ?` — ${ctx.proj}${ctx.parent?" › "+ctx.parent:""} · ${({high:"high",med:"medium",low:"low"})[n.priority||"med"]} priority · ${person(n.owner).name}`
       :"");
     return `<div class="grow"><div class="gtrack" data-full="${tip}" style="height:${h+4}px">
         <div class="gbar gsz-${sz} ${done?'gdone':''} ${isSub?'gsub':''}" data-tid="${n.id}" onpointerdown="barDown(event,${n.id},'move')"
@@ -428,7 +429,7 @@ function renderGantt(){
       if(!n.done) open++;
       if(n.due) maxE=Math.max(maxE,dayN(n.due)); });
     if(!anyLeaf&&!want(p.owner)) return;
-    const col=PEOPLE[p.owner].color;
+    const col=person(p.owner).color;
     // thin summary bar spanning the project's whole task range (earliest start → latest due)
     const sp=rollupSpan(p);
     const scs=Math.max(sp.s,R0G), sce=Math.max(Math.min(sp.e+1,R1G),scs+0.5);
@@ -477,7 +478,7 @@ function renderGantt(){
     any=cand.length>0;
     rows.push('<div class="pflat">');
     cand.forEach(({n,root,par})=>{
-      const ctx={proj:root.title,col:PEOPLE[root.owner].color,
+      const ctx={proj:root.title,col:person(root.owner).color,
                  parent:(!wantTask&&par&&par!==root)?par.title:null};
       rows.push(barRow(n,wantTask?chevFor(n):"",!wantTask,ctx));
       if(wantTask) rows.push(subRows(n,ctx));
@@ -686,7 +687,7 @@ function rowDown(e,id){
   const path=findPath(id), n=path[path.length-1], parent=path[path.length-2];
   RD={id,n,parentId:parent?parent.id:null,box:document.querySelector(".tbox"),
       mode:"reorder",over:null,toIdx:null,
-      ghost:makeGhost(n.title,PEOPLE[n.owner].color)};
+      ghost:makeGhost(n.title,person(n.owner).color)};
   placeGhost(RD.ghost,e);
   document.addEventListener("pointermove",rowMove,{passive:false});
   document.addEventListener("pointerup",rowUp);
@@ -765,7 +766,7 @@ function projMove(e){
     if(Math.hypot(e.clientX-PD.x0,e.clientY-PD.y0)<6) return; // click tolerance
     PD.started=true;
     const p=DATA.find(x=>x.id===PD.pid);
-    PD.ghost=makeGhost("⇅ "+p.title,PEOPLE[p.owner].color);
+    PD.ghost=makeGhost("⇅ "+p.title,person(p.owner).color);
   }
   placeGhost(PD.ghost,e);
   clearProjMark(); PD.over=null;
@@ -1178,7 +1179,7 @@ function finalize(draft,justAsked){
   if(draft.tasks&&draft.tasks.length) bits.push(draft.tasks.length+(draft.tasks.length>1?" tasks":" task"));
   if(draft.task) bits.push("task “"+draft.task+"”");
   if(draft.parentId){ const p=findPath(draft.parentId)?.pop(); if(p) bits.push("in "+p.title); }
-  if(draft.owner) bits.push("owner "+PEOPLE[draft.owner].name);
+  if(draft.owner) bits.push("owner "+person(draft.owner).name);
   if(draft.due) bits.push("due "+new Date(draft.due).toLocaleDateString("en-GB",{day:"numeric",month:"short"}));
   const got=bits.length?"Got it — "+bits.join(", ")+". ":"";
   if(next) return {draft,pending:next[0],ready:false,assistantSay:got+next[1]};
@@ -1239,7 +1240,7 @@ function delCapTask(i){ CAP.draft.tasks.splice(i,1); refreshCard(); }
 const escq=s=>(s||"").replace(/"/g,"&quot;");
 const ownerOpts=v=>`<option value="">Owner…</option>`+Object.entries(PEOPLE).map(([k,p])=>
   `<option value="${k}" ${v===k?'selected':''}>${p.name}</option>`).join("");
-function ownerPill(v,onch){ const col=v?PEOPLE[v].color:"#c2c8d2";
+function ownerPill(v,onch){ const col=v?person(v).color:"#c2c8d2";
   return `<span class="opill" style="--oc:${col}"><span class="odot"></span>
     <select onchange="${onch}">${ownerOpts(v)}</select></span>`; }
 function duePill(v,onch,sm){ return `<span class="duepill ${sm?'sm':''}"><input type="date" value="${v||''}" onchange="${onch}"></span>`; }
@@ -1493,9 +1494,9 @@ function doSearch(){
   if(q.length<2){ box.innerHTML=""; box.style.display="none"; return; }
   const hits=[];
   flat(DATA,(n,d,path)=>{ if(hits.length>=8) return;
-    if(n.title.toLowerCase().includes(q)||PEOPLE[n.owner].name.toLowerCase().includes(q))
+    if(n.title.toLowerCase().includes(q)||person(n.owner).name.toLowerCase().includes(q))
       hits.push({n,proj:path[0]?path[0].title:n.title}); });
-  box.innerHTML=hits.map(h=>`<button onmousedown="pickSearch(${h.n.id})"><b>${h.n.title}</b><span>${h.proj} · ${PEOPLE[h.n.owner].name}</span></button>`).join("")
+  box.innerHTML=hits.map(h=>`<button onmousedown="pickSearch(${h.n.id})"><b>${h.n.title}</b><span>${h.proj} · ${person(h.n.owner).name}</span></button>`).join("")
     ||'<div class="nores">No matches</div>';
   box.style.display="block";
 }
@@ -1572,6 +1573,7 @@ const _globals = {
 };
 Object.assign(window, _globals);
 
+renderAll();
 startBoardSync({
   data: DATA,
   getUid,
