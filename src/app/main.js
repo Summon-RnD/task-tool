@@ -324,8 +324,14 @@ let focusToday=false;   // show only today's priorities (late + due today + star
 function toggleFocus(){ focusToday=!focusToday; const b=$id("gfocusbtn"); if(b)b.classList.toggle("on",focusToday);
   defer(renderGantt); }
 let GVIEW="proj"; // "proj" | "tasks" | "subs"
+let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't jump to top
 function setGView(v){ GVIEW=v; defer(renderGantt); }
 function setZoom(i){ ZOOM=i; setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
+function onGanttScroll(){
+  const sc=document.querySelector(".gscroll"); if(!sc) return;
+  ganttScroll.left=sc.scrollLeft; ganttScroll.top=sc.scrollTop;
+  pinFlags();
+}
 function renderGantt(){
   const VIS=ZOOMS[ZOOM].v;
   // fixed-width today box: convert TODAY_PX into day units for the current zoom + panel width.
@@ -487,13 +493,16 @@ function renderGantt(){
     });
     rows.push('</div>');
   }
+  const prevSc=document.querySelector(".gscroll");
+  if(prevSc){ ganttScroll.left=prevSc.scrollLeft; ganttScroll.top=prevSc.scrollTop; }
   document.getElementById("gantt").innerHTML=
     `<div class="gscroll"><div class="ginner" style="min-width:${(SPAN_EFFV/(VIS-1+TW)*100).toFixed(1)}%">`+
     rows.join("")+
     (any?"":'<div class="grow"><span style="color:var(--ink-3);font-size:13.5px;padding:6px 0">No scheduled tasks for this filter.</span></div>')+
     `</div></div>`;
   const sc=document.querySelector(".gscroll");
-  sc.addEventListener("scroll",pinFlags,{passive:true});
+  sc.scrollLeft=ganttScroll.left; sc.scrollTop=ganttScroll.top;
+  sc.addEventListener("scroll",onGanttScroll,{passive:true});
   const gpane=document.querySelector(".gantt");
   if(gpane&&!gpane._floatBound){ gpane._floatBound=true; gpane.addEventListener("scroll",placeFloat,{passive:true}); }
   pinFlags(); placeFloat(); placeOverflowTitles();
