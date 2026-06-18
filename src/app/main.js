@@ -902,11 +902,15 @@ function addChild(id){
   if(!path||path.length>=3) return;
   snap();
   const n=path[path.length-1];
-  const taskDue=n.due||dayIso(LEAD.m);
-  n.children.push(T(cap1(v),n.owner,{d:taskDue,s:"m"}));
+  let taskDue=n.due||dayIso(LEAD.m);
+  if(focusToday&&dayN(taskDue)>0) taskDue=dayIso(0); // stay visible when today's-focus filter is on
+  const child=T(cap1(v),n.owner,{d:taskDue,s:"m"});
+  n.children.push(child);
   n.open=true;
+  if(path.length>1&&!subOpen(id)){ if(subsAll) COL.delete(id); else EXP.add(id); } // show new subtask rows on the gantt
   renderAll();
-  openDetail(id);
+  openDetail(id,{reveal:"bottom"});
+  revealGanttTask(child.id);
 }
 function addProject(){
   snap();
@@ -918,7 +922,24 @@ function addProject(){
   if(ti){ ti.focus(); ti.select(); }
 }
 let DETAIL_ID=null;
-function openDetail(id){
+function revealDetailScroll(box,reveal){
+  if(!box||!reveal) return;
+  const apply=()=>{ box.scrollTop=reveal==="bottom"?box.scrollHeight:reveal; };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
+}
+function revealGanttTask(id){
+  const run=()=>{
+    const bar=document.querySelector(`#gantt .gbar[data-tid="${id}"]`);
+    if(bar){ bar.scrollIntoView({block:"nearest"}); return; }
+    const path=findPath(id);
+    if(path?.[0]) document.querySelector(`.pgroup[data-pid="${path[0].id}"]`)?.scrollIntoView({block:"nearest"});
+  };
+  if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(()=>requestAnimationFrame(run));
+  else run();
+}
+function openDetail(id,opts){
   const path=findPath(id);
   if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
   const box=document.querySelector(".tbox");
@@ -970,7 +991,8 @@ function openDetail(id){
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
-  restoreDetailScroll(box,savedScroll);
+  if(opts?.reveal) revealDetailScroll(box,opts.reveal);
+  else restoreDetailScroll(box,savedScroll);
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
