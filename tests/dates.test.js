@@ -45,4 +45,37 @@ describe("dates", () => {
     expect(span.s).toBeLessThanOrEqual(span.e);
     expect(span.e).toBe(10);
   });
+
+  it("moves a parent task and its subtasks together", () => {
+    const parent = {
+      due: "2026-06-30",
+      size: "m",
+      children: [
+        { due: "2026-06-14", size: "s", children: [] },
+        { due: "2026-06-22", size: "m", children: [] },
+      ],
+    };
+    const before = h.spanFor(parent);
+    h.commitBarDrag(parent, "move", before.s + 3, before.e + 3, before.s, before.e);
+    expect(h.dayN(parent.due)).toBe(h.dayN("2026-07-03"));
+    expect(h.dayN(parent.children[0].due)).toBe(h.dayN("2026-06-17"));
+    expect(h.dayN(parent.children[1].due)).toBe(h.dayN("2026-06-25"));
+    expect(h.spanFor(parent).s).toBe(before.s + 3);
+    expect(h.spanFor(parent).e).toBe(before.e + 3);
+  });
+
+  it("resizes a parent task rollup from the right edge", () => {
+    const parent = {
+      due: "2026-06-30",
+      size: "m",
+      children: [
+        { due: "2026-06-14", size: "s", children: [] },
+        { due: "2026-06-22", size: "m", children: [] },
+      ],
+    };
+    const before = h.spanFor(parent);
+    h.commitBarDrag(parent, "r", before.s, before.e + 2, before.s, before.e);
+    expect(h.spanFor(parent).e).toBe(before.e + 2);
+    expect(h.dayN(parent.children[1].due)).toBe(h.dayN("2026-06-24"));
+  });
 });
