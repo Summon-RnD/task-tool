@@ -25,6 +25,18 @@ describe("board-sync", () => {
     expect(data[0].title).toBe("Server project");
   });
 
+  it("applyBoard normalizes tasks missing children arrays", () => {
+    const data = [];
+    const leaf = { id: 2, title: "Leaf", owner: "fd", due: "2026-06-18" };
+    const board = {
+      people: { fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Lead", al: [] } },
+      tasks: [{ id: 1, title: "Server project", owner: "fd", due: "2026-06-20", children: [leaf] }],
+      uid: 2,
+    };
+    expect(applyBoard(board, data, setUid)).toBe(true);
+    expect(leaf.children).toEqual([]);
+  });
+
   it("applyBoard rejects tasks that reference unknown owners", () => {
     const data = [T("Local", "fd", { d: "2026-06-20" })];
     const board = {

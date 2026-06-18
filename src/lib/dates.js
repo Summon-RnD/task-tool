@@ -1,7 +1,7 @@
 import { LEAD } from "../data/constants.js";
 import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js";
 import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js";
-import { flat } from "./tree.js";
+import { flat, kids } from "./tree.js";
 import { taskDone } from "./tree.js";
 
 export { dayN, dayIso } from "./date-core.js";
@@ -51,7 +51,7 @@ export function createDateHelpers(today) {
     let s = Infinity;
     let e = -Infinity;
     flat([n], (x) => {
-      if (x.children.length || !x.due) return;
+      if (kids(x).length || !x.due) return;
       const sp = barSpan(x);
       if (sp.s < s) s = sp.s;
       if (sp.e > e) e = sp.e;
@@ -59,7 +59,7 @@ export function createDateHelpers(today) {
     return e === -Infinity ? barSpan(n) : { s, e };
   }
 
-  const spanFor = (n) => (n.children.length ? rollupSpan(n) : barSpan(n));
+  const spanFor = (n) => (kids(n).length ? rollupSpan(n) : barSpan(n));
 
   function leafWeight(n) {
     const { s, e } = barSpan(n);
@@ -71,7 +71,7 @@ export function createDateHelpers(today) {
     let done = 0;
     let tot = 0;
     flat([n], (x) => {
-      if (x.children.length) return;
+      if (kids(x).length) return;
       const w = leafWeight(x);
       tot += w;
       if (x.done) done += w;
@@ -80,7 +80,7 @@ export function createDateHelpers(today) {
   }
 
   function isUrgent(n) {
-    const done = n.children.length ? taskDone(n) : n.done;
+    const done = kids(n).length ? taskDone(n) : n.done;
     if (done) return false;
     const { s } = spanFor(n);
     return !isNaN(s) && s <= 0;
@@ -95,20 +95,20 @@ export function createDateHelpers(today) {
     if (!dd) return;
     if (n.start) n.start = shiftIso(n.start, dd);
     if (n.due) n.due = shiftIso(n.due, dd);
-    n.children.forEach((c) => shiftSubtreeDates(c, dd));
+    kids(n).forEach((c) => shiftSubtreeDates(c, dd));
   }
 
   function rollupLeaves(n) {
     const leaves = [];
     flat([n], (x) => {
-      if (!x.children.length && x.due) leaves.push(x);
+      if (!kids(x).length && x.due) leaves.push(x);
     });
     return leaves;
   }
 
   /** Apply a bar move/resize; parent tasks with subtasks shift the rollup envelope. */
   function commitBarDrag(n, mode, s, e, s0, e0) {
-    if (!n.children.length) {
+    if (!kids(n).length) {
       if (mode === "move") {
         n.due = dayIsoLocal(e);
         if (n.start) n.start = dayIsoLocal(s);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskFactory, counts, findPath, pct, progFrac, taskDone, taskDoneAt } from "../src/lib/tree.js";
+import { createTaskFactory, counts, findPath, normalizeTaskTree, pct, progFrac, taskDone, taskDoneAt } from "../src/lib/tree.js";
 import { SIZE_PTS } from "../src/data/constants.js";
 
 describe("tree", () => {
@@ -48,5 +48,13 @@ describe("tree", () => {
       ],
     });
     expect(taskDoneAt(root)).toBe("2026-06-12");
+  });
+
+  it("normalizes missing children arrays on loaded nodes", () => {
+    const leaf = { id: 1, title: "Leaf", owner: "fd", due: "2026-06-20" };
+    const root = { id: 2, title: "Root", owner: "fd", children: [leaf] };
+    normalizeTaskTree([root]);
+    expect(leaf.children).toEqual([]);
+    expect(findPath(1, [root]).map((n) => n.title)).toEqual(["Root", "Leaf"]);
   });
 });
