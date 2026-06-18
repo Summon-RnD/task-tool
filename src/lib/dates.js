@@ -89,6 +89,74 @@ export function createDateHelpers(today) {
   const fmtD = (iso) =>
     parseLocalIso(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
+  const shiftIso = (iso, dd) => dayIsoLocal(dayNLocal(iso) + dd);
+
+  function shiftSubtreeDates(n, dd) {
+    if (!dd) return;
+    if (n.start) n.start = shiftIso(n.start, dd);
+    if (n.due) n.due = shiftIso(n.due, dd);
+    n.children.forEach((c) => shiftSubtreeDates(c, dd));
+  }
+
+  function rollupLeaves(n) {
+    const leaves = [];
+    flat([n], (x) => {
+      if (!x.children.length && x.due) leaves.push(x);
+    });
+    return leaves;
+  }
+
+  /** Apply a bar move/resize; parent tasks with subtasks shift the rollup envelope. */
+  function commitBarDrag(n, mode, s, e, s0, e0) {
+    if (!n.children.length) {
+      if (mode === "move") {
+        n.due = dayIsoLocal(e);
+        if (n.start) n.start = dayIsoLocal(s);
+      } else if (mode === "l") {
+        n.start = dayIsoLocal(s);
+      } else {
+        if (!n.start) n.start = dayIsoLocal(s0);
+        n.due = dayIsoLocal(e);
+      }
+      return;
+    }
+    const old = spanFor(n);
+    if (mode === "move") {
+      shiftSubtreeDates(n, s - old.s);
+      return;
+    }
+    if (mode === "l") {
+      const dd = s - old.s;
+      if (!dd) return;
+      const leaves = rollupLeaves(n);
+      let minS = Infinity;
+      leaves.forEach((l) => {
+        const ls = barSpan(l).s;
+        if (ls < minS) minS = ls;
+      });
+      leaves.forEach((l) => {
+        if (barSpan(l).s !== minS) return;
+        if (l.start) l.start = shiftIso(l.start, dd);
+        else l.due = shiftIso(l.due, dd);
+      });
+      n.start = dayIsoLocal(s);
+      return;
+    }
+    const dd = e - old.e;
+    if (!dd) return;
+    const leaves = rollupLeaves(n);
+    let maxE = -Infinity;
+    leaves.forEach((l) => {
+      const le = barSpan(l).e;
+      if (le > maxE) maxE = le;
+    });
+    leaves.forEach((l) => {
+      if (barSpan(l).e === maxE) l.due = shiftIso(l.due, dd);
+    });
+    n.due = dayIsoLocal(e);
+    if (!n.start) n.start = dayIsoLocal(old.s);
+  }
+
   return {
     dayN: dayNLocal,
     dayIso: dayIsoLocal,
@@ -102,5 +170,6 @@ export function createDateHelpers(today) {
     progWD,
     isUrgent,
     fmtD,
+    commitBarDrag,
   };
 }

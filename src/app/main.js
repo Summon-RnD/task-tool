@@ -237,10 +237,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD } = createDateHelpers(TODAY));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag } = createDateHelpers(TODAY));
 }
 syncDateHelpers();
 
@@ -586,7 +586,7 @@ function barDown(e,id,mode){
   if(e.button!==undefined && e.button>0) return; // right/middle mouse → let oncontextmenu open the quick menu
   e.preventDefault(); e.stopPropagation(); hideTip();
   const el=e.target.closest(".gbar"), track=el.parentElement;
-  const n=findPath(id).pop(), {s,e:en}=barSpan(n);
+  const n=findPath(id).pop(), {s,e:en}=spanFor(n);
   const touch=e.pointerType==="touch";
   el.classList.add("dragging");
   G={id,mode,el,n,touch,longTimer:null,ppd:track.getBoundingClientRect().width/SPAN_EFFV,
@@ -643,7 +643,8 @@ function barMove(ev){
   if(G.mode==="move"){ G.s=G.s0+dd; G.e=G.e0+dd; }
   else if(G.mode==="l"){ G.s=Math.min(G.s0+dd,G.e0); }
   else { G.e=Math.max(G.e0+dd,G.s0); }
-  const [cs,ce]=barGeom(G.s,G.e,G.n.done);
+  const done=G.n.children.length?taskDone(G.n):G.n.done;
+  const [cs,ce]=barGeom(G.s,G.e,done);
   G.el.style.left=gx(cs)+"%";
   G.el.style.width=(gx(ce)-gx(cs))+"%";
   if(G.ghost){ G.ghost.style.display=G.moved?"":"none";
@@ -682,9 +683,7 @@ function barUp(e){
     else openDetail(nid);            // desktop: left-click = full detail popup
     return; }
   snap();
-  if(G.mode==="move"){ n.due=dayIso(G.e); if(n.start) n.start=dayIso(G.s); }
-  else if(G.mode==="l"){ n.start=dayIso(G.s); }
-  else { if(!n.start) n.start=dayIso(G.s0); n.due=dayIso(G.e); }
+  commitBarDrag(n,G.mode,G.s,G.e,G.s0,G.e0);
   if(dropped) dropInto(dropped,n.id);
   G=null; ding(2); renderAll();
 }
