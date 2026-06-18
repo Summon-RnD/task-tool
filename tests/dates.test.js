@@ -32,6 +32,11 @@ describe("dates", () => {
     expect(h.barGeom(-3, -1, false)).toEqual([0, 1]);
   });
 
+  it("spanFor tolerates nodes without a children array", () => {
+    const leaf = { due: "2026-06-20", size: "m" };
+    expect(h.spanFor(leaf).e).toBe(8);
+  });
+
   it("rolls parent span across child leaves", () => {
     const parent = {
       due: "2026-06-30",
