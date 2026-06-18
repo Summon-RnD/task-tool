@@ -3,20 +3,20 @@ import {
   SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js";
+} from "../data/constants.js?v=39bf532";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=39bf532";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js";
-import { createDateHelpers } from "../lib/dates.js";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js";
+} from "../lib/tree.js?v=39bf532";
+import { createDateHelpers } from "../lib/dates.js?v=39bf532";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=39bf532";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js";
-import { startBoardSync } from "../lib/board-sync.js";
-import { buildSampleTasks } from "../data/sample-tasks.js";
+} from "../lib/capture.js?v=39bf532";
+import { startBoardSync } from "../lib/board-sync.js?v=39bf532";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=39bf532";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -325,12 +325,29 @@ function toggleFocus(){ focusToday=!focusToday; const b=$id("gfocusbtn"); if(b)b
   defer(renderGantt); }
 let GVIEW="proj"; // "proj" | "tasks" | "subs"
 let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't jump to top
+let ganttRestoring=false;
 function setGView(v){ GVIEW=v; defer(renderGantt); }
 function setZoom(i){ ZOOM=i; setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
 function onGanttScroll(){
   const sc=document.querySelector(".gscroll"); if(!sc) return;
-  ganttScroll.left=sc.scrollLeft; ganttScroll.top=sc.scrollTop;
+  if(!ganttRestoring){ ganttScroll.left=sc.scrollLeft; ganttScroll.top=sc.scrollTop; }
   pinFlags();
+}
+function restoreGanttScroll(sc){
+  if(!sc) return;
+  const left=ganttScroll.left, top=ganttScroll.top;
+  ganttRestoring=true;
+  const apply=()=>{ sc.scrollLeft=left; sc.scrollTop=top; pinFlags(); };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(()=>{ apply(); ganttRestoring=false; }); });
+  else ganttRestoring=false;
+}
+function applyBarDrag(n,mode,s,e,s0,e0){
+  if(typeof commitBarDrag==="function"){ commitBarDrag(n,mode,s,e,s0,e0); return; }
+  if(mode==="move"){ n.due=dayIso(e); if(n.start) n.start=dayIso(s); }
+  else if(mode==="l"){ n.start=dayIso(s); }
+  else { if(!n.start) n.start=dayIso(s0); n.due=dayIso(e); }
 }
 function renderGantt(){
   const VIS=ZOOMS[ZOOM].v;
@@ -501,8 +518,8 @@ function renderGantt(){
     (any?"":'<div class="grow"><span style="color:var(--ink-3);font-size:13.5px;padding:6px 0">No scheduled tasks for this filter.</span></div>')+
     `</div></div>`;
   const sc=document.querySelector(".gscroll");
-  sc.scrollLeft=ganttScroll.left; sc.scrollTop=ganttScroll.top;
   sc.addEventListener("scroll",onGanttScroll,{passive:true});
+  restoreGanttScroll(sc);
   const gpane=document.querySelector(".gantt");
   if(gpane&&!gpane._floatBound){ gpane._floatBound=true; gpane.addEventListener("scroll",placeFloat,{passive:true}); }
   pinFlags(); placeFloat(); placeOverflowTitles();
@@ -643,7 +660,7 @@ function barMove(ev){
   if(G.mode==="move"){ G.s=G.s0+dd; G.e=G.e0+dd; }
   else if(G.mode==="l"){ G.s=Math.min(G.s0+dd,G.e0); }
   else { G.e=Math.max(G.e0+dd,G.s0); }
-  const done=G.n.children.length?taskDone(G.n):G.n.done;
+  const done=(G.n.children||[]).length?taskDone(G.n):G.n.done;
   const [cs,ce]=barGeom(G.s,G.e,done);
   G.el.style.left=gx(cs)+"%";
   G.el.style.width=(gx(ce)-gx(cs))+"%";
@@ -683,7 +700,7 @@ function barUp(e){
     else openDetail(nid);            // desktop: left-click = full detail popup
     return; }
   snap();
-  commitBarDrag(n,G.mode,G.s,G.e,G.s0,G.e0);
+  applyBarDrag(n,G.mode,G.s,G.e,G.s0,G.e0);
   if(dropped) dropInto(dropped,n.id);
   G=null; ding(2); renderAll();
 }

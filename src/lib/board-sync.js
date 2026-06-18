@@ -1,6 +1,6 @@
-import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js";
-import { todayLocalIso } from "./date-core.js";
-import { flat } from "./tree.js";
+import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=39bf532";
+import { todayLocalIso } from "./date-core.js?v=39bf532";
+import { flat, normalizeTaskTree } from "./tree.js?v=39bf532";
 
 function maxTaskId(nodes) {
   let m = 0;
@@ -47,6 +47,7 @@ export function applyBoard(board, data, setUid) {
   Object.assign(PEOPLE, board.people);
 
   data.splice(0, data.length, ...board.tasks);
+  normalizeTaskTree(data);
 
   if (Array.isArray(board.clients)) {
     CLIENTS.splice(0, CLIENTS.length, ...board.clients);
