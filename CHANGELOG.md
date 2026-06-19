@@ -1,5 +1,12 @@
 # Changelog
 
+## Rebase PR #13 onto main (2026-06-19)
+
+### Fixed
+- Rebased `cursor/expand-size-range-0037` onto `main` (replacing the merge commit) so GitHub can update/rebase the branch cleanly.
+- Bar menu keeps expanded `SIZE_KEYS` (S-XXL) from the PR and Start/End date fields from `main`.
+- `updTask` keeps `normalizeSize` for size and `syncTaskDates` for start/end from `main`.
+
 ## Rebase PR #10 onto main (2026-06-19)
 
 ### Fixed
