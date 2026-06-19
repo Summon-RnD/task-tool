@@ -1,4 +1,4 @@
-import { normalizeSize } from "../data/constants.js?v=f315b4f";
+import { normalizeSize } from "../data/constants.js?v=fe6606d";
 
 export function createTaskFactory() {
   let uid = 0;
@@ -45,8 +45,8 @@ export function findPath(id, nodes, path = []) {
 export function normalizeTaskTree(nodes) {
   nodes.forEach((n) => {
     if (!Array.isArray(n.children)) n.children = [];
-    if (typeof n.comment === "string") n.comment = n.comment.trim() || null;
     if (n.size != null) n.size = normalizeSize(n.size);
+    if (typeof n.comment === "string") n.comment = n.comment.trim() || null;
     normalizeTaskTree(n.children);
   });
 }
