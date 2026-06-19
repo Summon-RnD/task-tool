@@ -63,4 +63,15 @@ describe("tree", () => {
     normalizeTaskTree([root]);
     expect(root.size).toBe("s");
   });
+
+  it("normalizes blank comments to null", () => {
+    const root = { id: 1, title: "Root", owner: "fd", comment: "  ", children: [] };
+    normalizeTaskTree([root]);
+    expect(root.comment).toBeNull();
+  });
+
+  it("stores comments on created tasks", () => {
+    const task = T("Task", "sk", { comment: "Needs review" });
+    expect(task.comment).toBe("Needs review");
+  });
 });
