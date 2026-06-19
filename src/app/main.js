@@ -476,9 +476,9 @@ function renderGantt(){
       <div class="grow gsumrow" style="min-height:${18+ph+16}px"><div class="gtrack">
         <button class="gsumlbl" style="left:${gx(scs)}%" onpointerdown="projDown(event,${p.id})"
           data-full="${p.title} — ${ppc}% done · ${pPts} pts · ${open} open · due ${p.due?fmtD(p.due):"no date"} — click to manage, drag to reorder">${p.title}</button>
-        <div class="gsumline" style="left:${gx(scs)}%;width:${spanW}%;height:${ph}px"></div>
-        <div class="gsumfill" style="left:${gx(scs)}%;width:${spanW*prog}%;height:${ph}px"></div>
-        <span class="gsumpct" style="left:${gx(sce)}%;top:${Math.round(18+ph/2-6)}px">${ppc}%</span>
+        <div class="gsumline" style="left:${gx(scs)}%;width:${spanW}%;height:${ph}px" onclick="openDetail(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
+        <div class="gsumfill" style="left:${gx(scs)}%;width:${spanW*prog}%;height:${ph}px" onclick="openDetail(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
+        <button type="button" class="gsumpct" style="left:${gx(sce)}%;top:${Math.round(18+ph/2-6)}px" onclick="openDetail(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}">${ppc}%</button>
       </div></div>
       ${taskRows}</div>`);
   });
