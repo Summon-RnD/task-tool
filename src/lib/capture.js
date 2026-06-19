@@ -1,6 +1,6 @@
-import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js?v=aab3a35";
-import { todayLocalIso } from "./date-core.js?v=aab3a35";
-import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js?v=aab3a35";
+import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js?v=307d28d";
+import { todayLocalIso } from "./date-core.js?v=307d28d";
+import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js?v=307d28d";
 
 export const cap1 = (s) => (s ? s.replace(/^[a-z]/, (c) => c.toUpperCase()) : s);
 
@@ -61,18 +61,27 @@ export function findDue(t, today = TODAY) {
 }
 
 export function findSize(t) {
-  const m = t.match(/\b(extra large|x-?large|xl|small|medium|large)\b/);
+  const m = t.match(/\b(extra extra large|xx-?large|xxl|extra large|x-?large|xl|extra small|x-?small|xs|small|medium|large)\b/i);
   if (!m) return null;
+  const key = m[1].toLowerCase().replace(/\s+/g, " ");
   return (
     {
+      "extra extra large": "xxl",
+      "xx-large": "xxl",
+      xxlarge: "xxl",
+      xxl: "xxl",
+      "extra large": "xl",
+      "x-large": "xl",
+      xlarge: "xl",
+      xl: "xl",
+      "extra small": "s",
+      "x-small": "s",
+      xsmall: "s",
+      xs: "s",
       small: "s",
       medium: "m",
       large: "l",
-      xl: "xl",
-      "x-large": "xl",
-      xlarge: "xl",
-      "extra large": "xl",
-    }[m[1]] || null
+    }[key] || null
   );
 }
 
