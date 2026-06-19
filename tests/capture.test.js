@@ -38,6 +38,8 @@ Install RS03 motors for JCDecaux.`;
   it("parses t-shirt sizes", () => {
     expect(findSize("this is a large task")).toBe("l");
     expect(findSize("extra large integration")).toBe("xl");
+    expect(findSize("extra small fix")).toBe("xs");
+    expect(findSize("xxl platform rollout")).toBe("xxl");
   });
 
   it("extracts projects and tasks from a conversation offline", () => {
