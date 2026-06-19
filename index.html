@@ -176,10 +176,10 @@
   .scrim{position:fixed;inset:0;background:rgba(20,24,35,.32);z-index:40;opacity:0;pointer-events:none;transition:opacity .22s}
   .scrim.show{opacity:1;pointer-events:auto}
   .tmodal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:22px}
-  .tmodal.show{display:flex}
+  .tmodal.show{display:flex;pointer-events:none}
   .tbox{background:var(--surface);border-radius:20px;box-shadow:0 24px 80px rgba(20,24,35,.3);
         width:min(540px,94vw);max-height:88vh;overflow-y:auto;padding:22px 24px;position:relative;
-        -webkit-overflow-scrolling:touch}
+        -webkit-overflow-scrolling:touch;pointer-events:auto}
   .crumb{font-size:12.5px;color:var(--ink-3);margin:0 30px 6px 0;font-weight:600}
   .crumb button{color:var(--accent);font-weight:600;font-size:12.5px}
   .dtitle{width:100%;font:inherit;font-size:20px;font-weight:800;letter-spacing:-.02em;border:none;
