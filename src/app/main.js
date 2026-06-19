@@ -3,20 +3,20 @@ import {
   SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=16f328e";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=16f328e";
+} from "../data/constants.js?v=aab3a35";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=aab3a35";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=16f328e";
-import { createDateHelpers } from "../lib/dates.js?v=16f328e";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=16f328e";
+} from "../lib/tree.js?v=aab3a35";
+import { createDateHelpers } from "../lib/dates.js?v=aab3a35";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=aab3a35";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=16f328e";
-import { startBoardSync } from "../lib/board-sync.js?v=16f328e";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=16f328e";
+} from "../lib/capture.js?v=aab3a35";
+import { startBoardSync } from "../lib/board-sync.js?v=aab3a35";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=aab3a35";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -868,7 +868,8 @@ function openBarMenu(id,anchor){
     <div class="bm-lbl">Owner</div>
     <div class="bm-chips">${Object.entries(PEOPLE).map(([k,p])=>`<button class="bm-chip ${n.owner===k?'on':''}" title="${p.name}" onclick="updTask(${id},'owner','${k}',true);refreshBarMenu(${id})"><span class="av xs" style="background:${p.color}">${p.initials}</span></button>`).join("")}</div>
     <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${["s","m","l","xl"].map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
-    <div class="bm-rw"><span class="bm-lbl">Due</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
+    <div class="bm-rw"><span class="bm-lbl">Start</span><input type="date" value="${n.start||''}" onchange="updTask(${id},'start',this.value,true)"></div>
+    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
   BM.classList.add("show"); BARMENU=id;
   const mw=BM.offsetWidth||236, mh=BM.offsetHeight||170, gap=8, vw=window.innerWidth, vh=window.innerHeight;
   // sit to the RIGHT of the pill (flip left only if there's no room)
@@ -882,12 +883,18 @@ function refreshBarMenu(id){ if(BARMENU===id) openBarMenu(id); }
 function closeBarMenu(){ BM.classList.remove("show"); BARMENU=null; }
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
+function syncTaskDates(n,field){
+  if(!n.start||!n.due) return;
+  const s=dayN(n.start), e=dayN(n.due);
+  if(isNaN(s)||isNaN(e)||s<=e) return;
+  if(field==="start") n.due=n.start; else n.start=n.due;
+}
 function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due") n.due=v||null;
-  else if(f==="start") n.start=v||null;
+  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); }
+  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); }
   else if(f==="size") n.size=v||null;
   renderAll(); if(!quiet&&f!=="title") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
@@ -967,7 +974,8 @@ function openDetail(id,opts){
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
       ${Object.entries(PEOPLE).map(([k,pp])=>`<option value="${k}" ${k===n.owner?'selected':''}>${pp.name}</option>`).join("")}</select></div>
-    <div class="frow"><span class="lbl">Due</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
+    <div class="frow"><span class="lbl">Start</span><input type="date" value="${n.start||""}" onchange="updTask(${id},'start',this.value)"></div>
+    <div class="frow"><span class="lbl">End</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
     ${sizeFld}
     ${leaf?`<div class="frow"><span class="lbl">Status</span>
       <button class="chip" style="${n.done?'background:var(--green-soft);color:var(--green)':'background:#eef0f4;color:var(--ink-2)'}"
