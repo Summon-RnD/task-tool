@@ -1,5 +1,11 @@
 # Changelog
 
+## Rebase PR #10 onto main (2026-06-19)
+
+### Fixed
+- Rebased `cursor/fix-new-task-display-0037` onto `main` (replacing the merge commit) so GitHub can update the branch cleanly.
+- Kept both `revealDetailScroll` on add and `restoreDetailScroll` on same-task reopen in `openDetail`.
+
 ## Fix manual task add button (2026-06-17)
 
 ### Fixed
