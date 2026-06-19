@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=c10e02c";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=c10e02c";
+} from "../data/constants.js?v=079759b";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=079759b";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=c10e02c";
-import { createDateHelpers } from "../lib/dates.js?v=c10e02c";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=c10e02c";
+} from "../lib/tree.js?v=079759b";
+import { createDateHelpers } from "../lib/dates.js?v=079759b";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=079759b";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=c10e02c";
-import { startBoardSync } from "../lib/board-sync.js?v=c10e02c";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=c10e02c";
+} from "../lib/capture.js?v=079759b";
+import { startBoardSync } from "../lib/board-sync.js?v=079759b";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=079759b";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -1108,7 +1108,7 @@ ${VOCAB_TEXT}
 - Use intent create_task / create_subtask ONLY when adding to a project/task that ALREADY EXISTS in context.projects. Then set parentId to that existing id.
 - "task" (singular) is only for create_task/create_subtask; for create_project leave "task" null and use "tasks".
 - owner MUST be one of the provided people ids, or null. Names are frequently MIS-HEARD by voice transcription — map any spelling variant or mishearing listed in the responsibility map to the correct id (e.g. "Janice"/"Yannis"/"Ioannis" → Iannis "ia"; "Flo"/"Florine" → Florian "fd"; "Sankeet" → Sanket "sk"). Do NOT assign the work to a different real teammate just because the heard name is fuzzy; if you genuinely cannot resolve it, use null rather than guessing the wrong person.
-- due: resolve relative dates ("Monday","tomorrow","in 3 days") to absolute YYYY-MM-DD using context.today; else null. size: xs/s/m/l/xl/xxl if stated else null.
+- due: resolve relative dates ("Monday","tomorrow","in 3 days") to absolute YYYY-MM-DD using context.today; else null. size: s/m/l/xl/xxl if stated else null.
 - pending = the single most useful field still needed ("projectName","taskTitle","parent","owner"), or null if nothing required is missing. Required: create_project needs project(name); create_task/subtask need task(title) and parentId.
 - ready = true when required fields are present (a project is ready once it has a name, even with zero tasks).
 - assistantSay = one short, natural sentence confirming what you understood and asking the next thing (or noting it's ready). Talk like a helpful colleague, not a form. If you just appended a task, acknowledge it and invite another or Create.
@@ -1379,7 +1379,7 @@ async function openaiTranscript(text,key){
   const sys=`You read a raw client/team conversation transcript and extract the NEW engineering projects and tasks it implies, for a 3-level planner (project > task > subtask).
 LANGUAGE: the transcript may be English or French — ALL OUTPUT MUST BE IN ENGLISH.
 - Group work into projects. A customer pilot becomes a project; set its "client" to the matching known client. Pure internal work has client=null.
-- Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (xs/s/m/l/xl/xxl or null), client (if the task is for a known client else null), and a subs array (usually empty).
+- Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (s/m/l/xl/xxl or null), client (if the task is for a known client else null), and a subs array (usually empty).
 - ASSIGNEE: infer each owner from this RESPONSIBILITY MAP using the task's content; only null if genuinely unclear:
 ${RESP_MAP_TEXT}
 ${VOCAB_TEXT}

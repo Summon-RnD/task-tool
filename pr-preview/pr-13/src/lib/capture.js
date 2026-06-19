@@ -1,6 +1,6 @@
-import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js?v=c10e02c";
-import { todayLocalIso } from "./date-core.js?v=c10e02c";
-import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js?v=c10e02c";
+import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js?v=079759b";
+import { todayLocalIso } from "./date-core.js?v=079759b";
+import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js?v=079759b";
 
 export const cap1 = (s) => (s ? s.replace(/^[a-z]/, (c) => c.toUpperCase()) : s);
 
@@ -74,10 +74,10 @@ export function findSize(t) {
       "x-large": "xl",
       xlarge: "xl",
       xl: "xl",
-      "extra small": "xs",
-      "x-small": "xs",
-      xsmall: "xs",
-      xs: "xs",
+      "extra small": "s",
+      "x-small": "s",
+      xsmall: "s",
+      xs: "s",
       small: "s",
       medium: "m",
       large: "l",

@@ -42,6 +42,7 @@ export function findPath(id, nodes, path = []) {
 export function normalizeTaskTree(nodes) {
   nodes.forEach((n) => {
     if (!Array.isArray(n.children)) n.children = [];
+    if (n.size === "xs") n.size = "s";
     normalizeTaskTree(n.children);
   });
 }
