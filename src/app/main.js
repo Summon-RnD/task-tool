@@ -3,20 +3,20 @@ import {
   SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=39bf532";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=39bf532";
+} from "../data/constants.js?v=3ec08df";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=3ec08df";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=39bf532";
-import { createDateHelpers } from "../lib/dates.js?v=39bf532";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=39bf532";
+} from "../lib/tree.js?v=3ec08df";
+import { createDateHelpers } from "../lib/dates.js?v=3ec08df";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=3ec08df";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=39bf532";
-import { startBoardSync } from "../lib/board-sync.js?v=39bf532";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=39bf532";
+} from "../lib/capture.js?v=3ec08df";
+import { startBoardSync } from "../lib/board-sync.js?v=3ec08df";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=3ec08df";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -326,6 +326,7 @@ function toggleFocus(){ focusToday=!focusToday; const b=$id("gfocusbtn"); if(b)b
 let GVIEW="proj"; // "proj" | "tasks" | "subs"
 let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't jump to top
 let ganttRestoring=false;
+let pageScrollY=0; // window scroll on layouts where .gscroll is horizontal-only
 function setGView(v){ GVIEW=v; defer(renderGantt); }
 function setZoom(i){ ZOOM=i; setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
 function onGanttScroll(){
@@ -342,6 +343,20 @@ function restoreGanttScroll(sc){
   if(typeof requestAnimationFrame!=="undefined")
     requestAnimationFrame(()=>{ apply(); requestAnimationFrame(()=>{ apply(); ganttRestoring=false; }); });
   else ganttRestoring=false;
+}
+function restorePageScroll(){
+  const y=pageScrollY;
+  const apply=()=>{ window.scrollTo(0,y); };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
+}
+function restoreDetailScroll(box,top){
+  if(!box) return;
+  const apply=()=>{ box.scrollTop=top; };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
 }
 function applyBarDrag(n,mode,s,e,s0,e0){
   if(typeof commitBarDrag==="function"){ commitBarDrag(n,mode,s,e,s0,e0); return; }
@@ -512,6 +527,7 @@ function renderGantt(){
   }
   const prevSc=document.querySelector(".gscroll");
   if(prevSc){ ganttScroll.left=prevSc.scrollLeft; ganttScroll.top=prevSc.scrollTop; }
+  pageScrollY=window.scrollY||document.documentElement.scrollTop||0;
   document.getElementById("gantt").innerHTML=
     `<div class="gscroll"><div class="ginner" style="min-width:${(SPAN_EFFV/(VIS-1+TW)*100).toFixed(1)}%">`+
     rows.join("")+
@@ -520,6 +536,7 @@ function renderGantt(){
   const sc=document.querySelector(".gscroll");
   sc.addEventListener("scroll",onGanttScroll,{passive:true});
   restoreGanttScroll(sc);
+  restorePageScroll();
   const gpane=document.querySelector(".gantt");
   if(gpane&&!gpane._floatBound){ gpane._floatBound=true; gpane.addEventListener("scroll",placeFloat,{passive:true}); }
   pinFlags(); placeFloat(); placeOverflowTitles();
@@ -904,6 +921,9 @@ let DETAIL_ID=null;
 function openDetail(id){
   const path=findPath(id);
   if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
+  const box=document.querySelector(".tbox");
+  const keepScroll=DETAIL_ID===id;
+  const savedScroll=keepScroll&&box?box.scrollTop:0;
   DETAIL_ID=id;
   const n=path[path.length-1], leaf=!n.children.length;
   document.getElementById("dCrumb").innerHTML=path.length>1
@@ -950,6 +970,7 @@ function openDetail(id){
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
+  restoreDetailScroll(box,savedScroll);
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
