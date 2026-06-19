@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { GBAR_H, LEAD, SIZE_KEYS, SIZE_NAMES, SIZE_PTS } from "../src/data/constants.js";
+import {
+  barHeight,
+  GBAR_H,
+  LEAD,
+  normalizeSize,
+  SIZE_KEYS,
+  SIZE_NAMES,
+  SIZE_PTS,
+  sizePts,
+} from "../src/data/constants.js";
 
 describe("size constants", () => {
   it("defines S through XXL with the requested point weights", () => {
@@ -12,5 +21,22 @@ describe("size constants", () => {
     }
     expect(GBAR_H.s).toBeLessThan(GBAR_H.xxl);
     expect(LEAD.s).toBeLessThanOrEqual(LEAD.xxl);
+  });
+
+  it("normalizes legacy and missing sizes the same for tasks and subtasks", () => {
+    expect(normalizeSize("l")).toBe("l");
+    expect(normalizeSize("xs")).toBe("s");
+    expect(normalizeSize(null)).toBe("m");
+    expect(normalizeSize(undefined)).toBe("m");
+  });
+
+  it("uses the same point and bar-height scale for every item", () => {
+    for (const k of SIZE_KEYS) {
+      expect(sizePts(k)).toBe(SIZE_PTS[k]);
+      expect(barHeight(k)).toBe(GBAR_H[k]);
+    }
+    expect(sizePts(null)).toBe(2);
+    expect(barHeight("xs")).toBe(GBAR_H.s);
+    expect(barHeight("m")).toBe(barHeight(null));
   });
 });
