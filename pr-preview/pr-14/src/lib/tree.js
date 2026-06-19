@@ -1,3 +1,5 @@
+import { normalizeSize } from "../data/constants.js?v=f315b4f";
+
 export function createTaskFactory() {
   let uid = 0;
   const T = (title, o, opts = {}) => ({
@@ -44,6 +46,7 @@ export function normalizeTaskTree(nodes) {
   nodes.forEach((n) => {
     if (!Array.isArray(n.children)) n.children = [];
     if (typeof n.comment === "string") n.comment = n.comment.trim() || null;
+    if (n.size != null) n.size = normalizeSize(n.size);
     normalizeTaskTree(n.children);
   });
 }

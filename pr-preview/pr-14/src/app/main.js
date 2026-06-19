@@ -1,22 +1,22 @@
 import {
   PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS,
-  SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
+  SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=0f25779";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=0f25779";
+} from "../data/constants.js?v=f315b4f";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=f315b4f";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=0f25779";
-import { createDateHelpers } from "../lib/dates.js?v=0f25779";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=0f25779";
+} from "../lib/tree.js?v=f315b4f";
+import { createDateHelpers } from "../lib/dates.js?v=f315b4f";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=f315b4f";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=0f25779";
-import { startBoardSync } from "../lib/board-sync.js?v=0f25779";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=0f25779";
+} from "../lib/capture.js?v=f315b4f";
+import { startBoardSync } from "../lib/board-sync.js?v=f315b4f";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=f315b4f";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -36,7 +36,7 @@ const fitsDepth = (node, destId) => fitsDepthIn(node, destId, DATA);
 /* ================= helpers ================= */
 const escText = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 /* size-weighted progress (0..1): done size-points / total size-points across the leaves */
-const progFrac = (n) => { let done = 0, tot = 0; flat([n], (x) => { if (x.children.length) return; const w = SIZE_PTS[x.size || "m"]; tot += w; if (x.done) done += w; }); return tot ? done / tot : 0; };
+const progFrac = (n) => { let done = 0, tot = 0; flat([n], (x) => { if (x.children.length) return; const w = sizePts(x.size); tot += w; if (x.done) done += w; }); return tot ? done / tot : 0; };
 function dueChip(due,done){ if(!due||done) return "";
   const dd=Math.round((parseLocalIso(due)-TODAY)/864e5);
   const cls=dd<0?"overdue":dd<=3?"soon":"";
@@ -128,7 +128,7 @@ function renderDash(){
     const da=taskDoneAt(n); if(!da) return;
     const ago=Math.round((TODAY-parseLocalIso(da))/864e5);
     if(ago>=0&&ago<=Math.max(HZ,0)) banked.push({n,proj:(path[0]||n).title,dn:true}); });
-  const PT=x=>SIZE_PTS[x.n.size||"m"];
+  const PT=x=>sizePts(x.n.size);
   const pill=(x,cls,side)=>`<div class="pill ${cls} side-${side} sz-${x.n.size||'m'}" data-full="${x.n.title} — ${person(x.n.owner).name} · ${x.proj}">
       <button class="pop ${x.dn?'on':''}" onclick="ding(4);toggleDone(${x.n.id})" aria-label="${x.dn?'Undo':'Mark done'}">${x.dn?'✓':''}</button>
       <button class="pbody" onclick="openDetail(${x.n.id})"><span class="t">${x.n.title}</span></button>
@@ -327,6 +327,7 @@ function toggleFocus(){ focusToday=!focusToday; const b=$id("gfocusbtn"); if(b)b
 let GVIEW="proj"; // "proj" | "tasks" | "subs"
 let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't jump to top
 let ganttRestoring=false;
+let pageScrollY=0; // window scroll on layouts where .gscroll is horizontal-only
 function setGView(v){ GVIEW=v; defer(renderGantt); }
 function setZoom(i){ ZOOM=i; setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
 function onGanttScroll(){
@@ -343,6 +344,20 @@ function restoreGanttScroll(sc){
   if(typeof requestAnimationFrame!=="undefined")
     requestAnimationFrame(()=>{ apply(); requestAnimationFrame(()=>{ apply(); ganttRestoring=false; }); });
   else ganttRestoring=false;
+}
+function restorePageScroll(){
+  const y=pageScrollY;
+  const apply=()=>{ window.scrollTo(0,y); };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
+}
+function restoreDetailScroll(box,top){
+  if(!box) return;
+  const apply=()=>{ box.scrollTop=top; };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
 }
 function applyBarDrag(n,mode,s,e,s0,e0){
   if(typeof commitBarDrag==="function"){ commitBarDrag(n,mode,s,e,s0,e0); return; }
@@ -412,8 +427,8 @@ function renderGantt(){
     if(!n.due) return "";
     const {s,e}=spanFor(n), done=isSub?n.done:taskDone(n);
     if(e<R0G-14||s>R1G) return "";
-    const late=!done&&e<0, [tcs,tce]=barGeom(s,e,done), sz=n.size||"m";
-    const h=isSub?Math.max(15,Math.round(GBAR_H[sz]*0.62)):GBAR_H[sz]; // subtasks shorter than tasks
+    const late=!done&&e<0, [tcs,tce]=barGeom(s,e,done), sz=normalizeSize(n.size);
+    const h=barHeight(sz); // same thickness scale for tasks and subtasks
     // a task with subtasks shows its duration-weighted completion as a darker fill inside its
     // own bar (same two-tone idea as the project summary bar, applied in place)
     const hasKids=!isSub&&n.children.length>0, donePct=hasKids?Math.round(progWD(n)*100):0;
@@ -471,7 +486,7 @@ function renderGantt(){
     any=true;
     const prog=progWD(p), ppc=Math.round(prog*100), spanW=gx(sce)-gx(scs);
     // project bar thickness scales with the project's total weight (sum of its leaf size points)
-    let pPts=0; flat([p],x=>{ if(x.children.length) return; pPts+=SIZE_PTS[x.size||"m"]; });
+    let pPts=0; flat([p],x=>{ if(x.children.length) return; pPts+=sizePts(x.size); });
     const ph=Math.max(7,Math.min(20,Math.round(5+Math.sqrt(pPts)*2.2)));
     rows.push(`<div class="pgroup" data-pid="${p.id}">
       <div class="grow gsumrow" style="min-height:${18+ph+16}px"><div class="gtrack">
@@ -499,7 +514,7 @@ function renderGantt(){
       cand.push({n,e,root,par});
     });
     cand.sort((a,b)=>a.e-b.e
-      ||SIZE_PTS[b.n.size||"m"]-SIZE_PTS[a.n.size||"m"]
+      ||sizePts(b.n.size)-sizePts(a.n.size)
       ||PRW[a.n.priority||"med"]-PRW[b.n.priority||"med"]);
     any=cand.length>0;
     rows.push('<div class="pflat">');
@@ -513,6 +528,7 @@ function renderGantt(){
   }
   const prevSc=document.querySelector(".gscroll");
   if(prevSc){ ganttScroll.left=prevSc.scrollLeft; ganttScroll.top=prevSc.scrollTop; }
+  pageScrollY=window.scrollY||document.documentElement.scrollTop||0;
   document.getElementById("gantt").innerHTML=
     `<div class="gscroll"><div class="ginner" style="min-width:${(SPAN_EFFV/(VIS-1+TW)*100).toFixed(1)}%">`+
     rows.join("")+
@@ -521,6 +537,7 @@ function renderGantt(){
   const sc=document.querySelector(".gscroll");
   sc.addEventListener("scroll",onGanttScroll,{passive:true});
   restoreGanttScroll(sc);
+  restorePageScroll();
   const gpane=document.querySelector(".gantt");
   if(gpane&&!gpane._floatBound){ gpane._floatBound=true; gpane.addEventListener("scroll",placeFloat,{passive:true}); }
   pinFlags(); placeFloat(); placeOverflowTitles();
@@ -851,8 +868,9 @@ function openBarMenu(id,anchor){
   BM.innerHTML=`
     <div class="bm-lbl">Owner</div>
     <div class="bm-chips">${Object.entries(PEOPLE).map(([k,p])=>`<button class="bm-chip ${n.owner===k?'on':''}" title="${p.name}" onclick="updTask(${id},'owner','${k}',true);refreshBarMenu(${id})"><span class="av xs" style="background:${p.color}">${p.initials}</span></button>`).join("")}</div>
-    <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${["s","m","l","xl"].map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
-    <div class="bm-rw"><span class="bm-lbl">Due</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
+    <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${SIZE_KEYS.map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
+    <div class="bm-rw"><span class="bm-lbl">Start</span><input type="date" value="${n.start||''}" onchange="updTask(${id},'start',this.value,true)"></div>
+    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
   BM.classList.add("show"); BARMENU=id;
   const mw=BM.offsetWidth||236, mh=BM.offsetHeight||170, gap=8, vw=window.innerWidth, vh=window.innerHeight;
   // sit to the RIGHT of the pill (flip left only if there's no room)
@@ -866,13 +884,19 @@ function refreshBarMenu(id){ if(BARMENU===id) openBarMenu(id); }
 function closeBarMenu(){ BM.classList.remove("show"); BARMENU=null; }
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
+function syncTaskDates(n,field){
+  if(!n.start||!n.due) return;
+  const s=dayN(n.start), e=dayN(n.due);
+  if(isNaN(s)||isNaN(e)||s<=e) return;
+  if(field==="start") n.due=n.start; else n.start=n.due;
+}
 function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due") n.due=v||null;
-  else if(f==="start") n.start=v||null;
-  else if(f==="size") n.size=v||null;
+  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); }
+  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); }
+  else if(f==="size") n.size=v?normalizeSize(v):null;
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
@@ -887,11 +911,15 @@ function addChild(id){
   if(!path||path.length>=3) return;
   snap();
   const n=path[path.length-1];
-  const taskDue=n.due||dayIso(LEAD.m);
-  n.children.push(T(cap1(v),n.owner,{d:taskDue,s:"m"}));
+  let taskDue=n.due||dayIso(LEAD.m);
+  if(focusToday&&dayN(taskDue)>0) taskDue=dayIso(0); // stay visible when today's-focus filter is on
+  const child=T(cap1(v),n.owner,{d:taskDue,s:"m"});
+  n.children.push(child);
   n.open=true;
+  if(path.length>1&&!subOpen(id)){ if(subsAll) COL.delete(id); else EXP.add(id); } // show new subtask rows on the gantt
   renderAll();
-  openDetail(id);
+  openDetail(id,{reveal:"bottom"});
+  revealGanttTask(child.id);
 }
 function addProject(){
   snap();
@@ -903,9 +931,29 @@ function addProject(){
   if(ti){ ti.focus(); ti.select(); }
 }
 let DETAIL_ID=null;
-function openDetail(id){
+function revealDetailScroll(box,reveal){
+  if(!box||!reveal) return;
+  const apply=()=>{ box.scrollTop=reveal==="bottom"?box.scrollHeight:reveal; };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
+}
+function revealGanttTask(id){
+  const run=()=>{
+    const bar=document.querySelector(`#gantt .gbar[data-tid="${id}"]`);
+    if(bar){ bar.scrollIntoView({block:"nearest"}); return; }
+    const path=findPath(id);
+    if(path?.[0]) document.querySelector(`.pgroup[data-pid="${path[0].id}"]`)?.scrollIntoView({block:"nearest"});
+  };
+  if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(()=>requestAnimationFrame(run));
+  else run();
+}
+function openDetail(id,opts){
   const path=findPath(id);
   if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
+  const box=document.querySelector(".tbox");
+  const keepScroll=DETAIL_ID===id;
+  const savedScroll=keepScroll&&box?box.scrollTop:0;
   DETAIL_ID=id;
   const n=path[path.length-1], leaf=!n.children.length;
   document.getElementById("dCrumb").innerHTML=path.length>1
@@ -920,16 +968,17 @@ function openDetail(id){
     mopts.push(`<option value="${x.id}" ${x.id===par?'disabled':''}>${"&nbsp;".repeat(depth*3)}${x.title}${x.id===par?" (current)":""}</option>`); });
   // Size: leaves carry an editable t-shirt size; projects/parent tasks SHOW the rolled-up
   // point total (sum of their leaves' size points) — not a field the user fills in.
-  let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=SIZE_PTS[x.size||"m"]; });
+  let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=sizePts(x.size); });
   const sizeFld=leaf
     ? `<div class="frow"><span class="lbl">Size</span><select onchange="updTask(${id},'size',this.value)">
-        <option value="">—</option>${["s","m","l","xl"].map(z=>`<option value="${z}" ${n.size===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
+        <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
   const kind=path.length===1?"project":path.length===2?"task":"subtask";
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
       ${Object.entries(PEOPLE).map(([k,pp])=>`<option value="${k}" ${k===n.owner?'selected':''}>${pp.name}</option>`).join("")}</select></div>
-    <div class="frow"><span class="lbl">Due</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
+    <div class="frow"><span class="lbl">Start</span><input type="date" value="${n.start||""}" onchange="updTask(${id},'start',this.value)"></div>
+    <div class="frow"><span class="lbl">End</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
     ${sizeFld}
     <div class="frow frow-stack"><span class="lbl">Comment</span>
       <textarea class="dcomment" rows="3" placeholder="Add a comment on this ${kind}…"
@@ -940,9 +989,9 @@ function openDetail(id){
     <div class="frow"><span class="lbl">Move to</span><select onchange="moveTask(${id},this.value)">${mopts.join("")}</select></div>
     ${path.length>=3?"":`<div class="subhdr">${path.length>1?"Subtasks":"Tasks — grip ⠿ to drag onto another project"}</div>`}
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
-      let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=SIZE_PTS[x.size||"m"]; });
+      let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=sizePts(x.size); });
       const szCtl=lleaf
-        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${["s","m","l","xl"].map(z=>`<option value="${z}" ${ch.size===z?"selected":""}>${SIZE_NAMES[z]}</option>`).join("")}</select>`
+        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`
         : `<span class="rowpts" title="Rolled up from subtasks">${_cp} pts</span>`;
       return `<div class="ptask" data-cid="${ch.id}">
         <button class="grip2" onpointerdown="rowDown(event,${ch.id})" aria-label="Drag onto a project pill in the timeline">${GRIP_SVG}</button>
@@ -956,6 +1005,8 @@ function openDetail(id){
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
+  if(opts?.reveal) revealDetailScroll(box,opts.reveal);
+  else restoreDetailScroll(box,savedScroll);
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
@@ -1060,6 +1111,7 @@ function updateKeyBadge(){ const b=$id("keyBtn"); if(b) b.textContent=getKey()?"
 
 /* swappable extraction: a live endpoint, then OpenAI direct (browser key), then the mock */
 const OWNER_IDS=[...Object.keys(PEOPLE),null]; // owner must be a real teammate id, never free text
+const SIZE_SCHEMA_ENUM=[...SIZE_KEYS,null];
 const OAI_SCHEMA={type:"object",additionalProperties:false,
   required:["intent","project","task","tasks","remove","owner","parentId","due","size","pending","ready","assistantSay"],
   properties:{
@@ -1069,13 +1121,13 @@ const OAI_SCHEMA={type:"object",additionalProperties:false,
     tasks:{type:"array",items:{type:"object",additionalProperties:false,
       required:["title","owner","due","size","subs"],
       properties:{title:{type:"string"},owner:{type:["string","null"],enum:OWNER_IDS},
-        due:{type:["string","null"]},size:{type:["string","null"],enum:["s","m","l","xl",null]},
+        due:{type:["string","null"]},size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM},
         subs:{type:"array",items:{type:"object",additionalProperties:false,
           required:["title","owner","due","size"],
           properties:{title:{type:"string"},owner:{type:["string","null"],enum:OWNER_IDS},
-            due:{type:["string","null"]},size:{type:["string","null"],enum:["s","m","l","xl",null]}}}}}}},
+            due:{type:["string","null"]},size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM}}}}}}},
     owner:{type:["string","null"],enum:OWNER_IDS}, parentId:{type:["integer","null"]},
-    due:{type:["string","null"]}, size:{type:["string","null"],enum:["s","m","l","xl",null]},
+    due:{type:["string","null"]}, size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM},
     pending:{type:["string","null"]}, ready:{type:"boolean"}, assistantSay:{type:"string"}}};
 function captureContext(){ return {today:isoCap(TODAY),
   people:Object.entries(PEOPLE).map(([id,p])=>({id,name:p.name,responsibility:p.role,aka:p.al})),
@@ -1113,7 +1165,7 @@ ${VOCAB_TEXT}
 - Use intent create_task / create_subtask ONLY when adding to a project/task that ALREADY EXISTS in context.projects. Then set parentId to that existing id.
 - "task" (singular) is only for create_task/create_subtask; for create_project leave "task" null and use "tasks".
 - owner MUST be one of the provided people ids, or null. Names are frequently MIS-HEARD by voice transcription — map any spelling variant or mishearing listed in the responsibility map to the correct id (e.g. "Janice"/"Yannis"/"Ioannis" → Iannis "ia"; "Flo"/"Florine" → Florian "fd"; "Sankeet" → Sanket "sk"). Do NOT assign the work to a different real teammate just because the heard name is fuzzy; if you genuinely cannot resolve it, use null rather than guessing the wrong person.
-- due: resolve relative dates ("Monday","tomorrow","in 3 days") to absolute YYYY-MM-DD using context.today; else null. size: s/m/l/xl if stated else null.
+- due: resolve relative dates ("Monday","tomorrow","in 3 days") to absolute YYYY-MM-DD using context.today; else null. size: s/m/l/xl/xxl if stated else null.
 - pending = the single most useful field still needed ("projectName","taskTitle","parent","owner"), or null if nothing required is missing. Required: create_project needs project(name); create_task/subtask need task(title) and parentId.
 - ready = true when required fields are present (a project is ready once it has a name, even with zero tasks).
 - assistantSay = one short, natural sentence confirming what you understood and asking the next thing (or noting it's ready). Talk like a helpful colleague, not a form. If you just appended a task, acknowledge it and invite another or Create.
@@ -1293,7 +1345,7 @@ function ownerPill(v,onch){ const col=v?person(v).color:"#c2c8d2";
   return `<span class="opill" style="--oc:${col}"><span class="odot"></span>
     <select onchange="${onch}">${ownerOpts(v)}</select></span>`; }
 function duePill(v,onch,sm){ return `<span class="duepill ${sm?'sm':''}"><input type="date" value="${v||''}" onchange="${onch}"></span>`; }
-function szSeg(v,onch){ return `<span class="szseg">${["s","m","l","xl"].map(z=>
+function szSeg(v,onch){ return `<span class="szseg">${SIZE_KEYS.map(z=>
   `<button class="szb ${v===z?'on':''}" onclick="${onch.replace('Z',"'"+z+"'")}">${SIZE_NAMES[z]}</button>`).join("")}</span>`; }
 function taskCardHTML(tk,i){ tk.subs=tk.subs||[];
   return `<div class="tcard">
@@ -1372,19 +1424,19 @@ const OAI_PROPOSAL_SCHEMA={type:"object",additionalProperties:false,
             title:{type:"string"},
             owner:{type:["string","null"],enum:OWNER_IDS},
             due:{type:["string","null"]},
-            size:{type:["string","null"],enum:["s","m","l","xl",null]},
+            size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM},
             client:{type:["string","null"],enum:CLIENT_NAMES},
             subs:{type:"array",items:{type:"object",additionalProperties:false,
               required:["title","owner","due","size"],
               properties:{title:{type:"string"},owner:{type:["string","null"],enum:OWNER_IDS},
-                due:{type:["string","null"]},size:{type:["string","null"],enum:["s","m","l","xl",null]}}}}
+                due:{type:["string","null"]},size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM}}}}
           }}}
       }}}}};
 async function openaiTranscript(text,key){
   const sys=`You read a raw client/team conversation transcript and extract the NEW engineering projects and tasks it implies, for a 3-level planner (project > task > subtask).
 LANGUAGE: the transcript may be English or French — ALL OUTPUT MUST BE IN ENGLISH.
 - Group work into projects. A customer pilot becomes a project; set its "client" to the matching known client. Pure internal work has client=null.
-- Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (s/m/l/xl or null), client (if the task is for a known client else null), and a subs array (usually empty).
+- Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (s/m/l/xl/xxl or null), client (if the task is for a known client else null), and a subs array (usually empty).
 - ASSIGNEE: infer each owner from this RESPONSIBILITY MAP using the task's content; only null if genuinely unclear:
 ${RESP_MAP_TEXT}
 ${VOCAB_TEXT}
