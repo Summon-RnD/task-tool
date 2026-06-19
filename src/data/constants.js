@@ -41,6 +41,16 @@ export const SIZE_PTS = { s: 1, m: 2, l: 4, xl: 6, xxl: 8 };
 export const SIZE_NAMES = { s: "S", m: "M", l: "L", xl: "XL", xxl: "XXL" };
 export const LEAD = { s: 1, m: 3, l: 7, xl: 14, xxl: 28 };
 
+/** Map legacy/invalid sizes onto the active scale (same rules for tasks and subtasks). */
+export function normalizeSize(size) {
+  if (size && SIZE_KEYS.includes(size)) return size;
+  if (size === "xs") return "s";
+  return "m";
+}
+
+export const sizePts = (size) => SIZE_PTS[normalizeSize(size)];
+export const barHeight = (size) => GBAR_H[normalizeSize(size)];
+
 export const ZOOMS = [
   { l: "Day", h: 0, v: 3 },
   { l: "Week", h: 7, v: 7 },
