@@ -1,4 +1,4 @@
-import { calendarToday } from "../lib/date-core.js?v=6ceba3d";
+import { calendarToday } from "../lib/date-core.js?v=16f328e";
 
 export const PEOPLE = {
   jn: { name: "Jean", initials: "JN", color: "#27a468", role: "Finances", al: ["jean"] },
