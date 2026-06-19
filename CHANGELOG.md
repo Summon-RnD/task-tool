@@ -1,5 +1,11 @@
 # Changelog
 
+## Rebase PR #14 onto main (2026-06-19)
+
+### Fixed
+- Rebased `cursor/add-task-comments-0037` onto `main` (replacing the merge commit) so GitHub can rebase/update the branch cleanly.
+- Kept comment textarea support from the PR plus `syncTaskDates`, `normalizeSize`, and legacy size migration from `main`.
+
 ## Rebase PR #13 onto main (2026-06-19)
 
 ### Fixed
