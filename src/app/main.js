@@ -1,6 +1,6 @@
 import {
   PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS,
-  SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
+  SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
 } from "../data/constants.js";
@@ -867,7 +867,7 @@ function openBarMenu(id,anchor){
   BM.innerHTML=`
     <div class="bm-lbl">Owner</div>
     <div class="bm-chips">${Object.entries(PEOPLE).map(([k,p])=>`<button class="bm-chip ${n.owner===k?'on':''}" title="${p.name}" onclick="updTask(${id},'owner','${k}',true);refreshBarMenu(${id})"><span class="av xs" style="background:${p.color}">${p.initials}</span></button>`).join("")}</div>
-    <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${["s","m","l","xl"].map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
+    <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${SIZE_KEYS.map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
     <div class="bm-rw"><span class="bm-lbl">Start</span><input type="date" value="${n.start||''}" onchange="updTask(${id},'start',this.value,true)"></div>
     <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
   BM.classList.add("show"); BARMENU=id;
@@ -969,7 +969,7 @@ function openDetail(id,opts){
   let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=SIZE_PTS[x.size||"m"]; });
   const sizeFld=leaf
     ? `<div class="frow"><span class="lbl">Size</span><select onchange="updTask(${id},'size',this.value)">
-        <option value="">—</option>${["s","m","l","xl"].map(z=>`<option value="${z}" ${n.size===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
+        <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${n.size===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
@@ -985,7 +985,7 @@ function openDetail(id,opts){
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
       let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=SIZE_PTS[x.size||"m"]; });
       const szCtl=lleaf
-        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${["s","m","l","xl"].map(z=>`<option value="${z}" ${ch.size===z?"selected":""}>${SIZE_NAMES[z]}</option>`).join("")}</select>`
+        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${ch.size===z?"selected":""}>${SIZE_NAMES[z]}</option>`).join("")}</select>`
         : `<span class="rowpts" title="Rolled up from subtasks">${_cp} pts</span>`;
       return `<div class="ptask" data-cid="${ch.id}">
         <button class="grip2" onpointerdown="rowDown(event,${ch.id})" aria-label="Drag onto a project pill in the timeline">${GRIP_SVG}</button>
@@ -1105,6 +1105,7 @@ function updateKeyBadge(){ const b=$id("keyBtn"); if(b) b.textContent=getKey()?"
 
 /* swappable extraction: a live endpoint, then OpenAI direct (browser key), then the mock */
 const OWNER_IDS=[...Object.keys(PEOPLE),null]; // owner must be a real teammate id, never free text
+const SIZE_SCHEMA_ENUM=[...SIZE_KEYS,null];
 const OAI_SCHEMA={type:"object",additionalProperties:false,
   required:["intent","project","task","tasks","remove","owner","parentId","due","size","pending","ready","assistantSay"],
   properties:{
@@ -1114,13 +1115,13 @@ const OAI_SCHEMA={type:"object",additionalProperties:false,
     tasks:{type:"array",items:{type:"object",additionalProperties:false,
       required:["title","owner","due","size","subs"],
       properties:{title:{type:"string"},owner:{type:["string","null"],enum:OWNER_IDS},
-        due:{type:["string","null"]},size:{type:["string","null"],enum:["s","m","l","xl",null]},
+        due:{type:["string","null"]},size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM},
         subs:{type:"array",items:{type:"object",additionalProperties:false,
           required:["title","owner","due","size"],
           properties:{title:{type:"string"},owner:{type:["string","null"],enum:OWNER_IDS},
-            due:{type:["string","null"]},size:{type:["string","null"],enum:["s","m","l","xl",null]}}}}}}},
+            due:{type:["string","null"]},size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM}}}}}}},
     owner:{type:["string","null"],enum:OWNER_IDS}, parentId:{type:["integer","null"]},
-    due:{type:["string","null"]}, size:{type:["string","null"],enum:["s","m","l","xl",null]},
+    due:{type:["string","null"]}, size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM},
     pending:{type:["string","null"]}, ready:{type:"boolean"}, assistantSay:{type:"string"}}};
 function captureContext(){ return {today:isoCap(TODAY),
   people:Object.entries(PEOPLE).map(([id,p])=>({id,name:p.name,responsibility:p.role,aka:p.al})),
@@ -1158,7 +1159,7 @@ ${VOCAB_TEXT}
 - Use intent create_task / create_subtask ONLY when adding to a project/task that ALREADY EXISTS in context.projects. Then set parentId to that existing id.
 - "task" (singular) is only for create_task/create_subtask; for create_project leave "task" null and use "tasks".
 - owner MUST be one of the provided people ids, or null. Names are frequently MIS-HEARD by voice transcription — map any spelling variant or mishearing listed in the responsibility map to the correct id (e.g. "Janice"/"Yannis"/"Ioannis" → Iannis "ia"; "Flo"/"Florine" → Florian "fd"; "Sankeet" → Sanket "sk"). Do NOT assign the work to a different real teammate just because the heard name is fuzzy; if you genuinely cannot resolve it, use null rather than guessing the wrong person.
-- due: resolve relative dates ("Monday","tomorrow","in 3 days") to absolute YYYY-MM-DD using context.today; else null. size: s/m/l/xl if stated else null.
+- due: resolve relative dates ("Monday","tomorrow","in 3 days") to absolute YYYY-MM-DD using context.today; else null. size: xs/s/m/l/xl/xxl if stated else null.
 - pending = the single most useful field still needed ("projectName","taskTitle","parent","owner"), or null if nothing required is missing. Required: create_project needs project(name); create_task/subtask need task(title) and parentId.
 - ready = true when required fields are present (a project is ready once it has a name, even with zero tasks).
 - assistantSay = one short, natural sentence confirming what you understood and asking the next thing (or noting it's ready). Talk like a helpful colleague, not a form. If you just appended a task, acknowledge it and invite another or Create.
@@ -1338,7 +1339,7 @@ function ownerPill(v,onch){ const col=v?person(v).color:"#c2c8d2";
   return `<span class="opill" style="--oc:${col}"><span class="odot"></span>
     <select onchange="${onch}">${ownerOpts(v)}</select></span>`; }
 function duePill(v,onch,sm){ return `<span class="duepill ${sm?'sm':''}"><input type="date" value="${v||''}" onchange="${onch}"></span>`; }
-function szSeg(v,onch){ return `<span class="szseg">${["s","m","l","xl"].map(z=>
+function szSeg(v,onch){ return `<span class="szseg">${SIZE_KEYS.map(z=>
   `<button class="szb ${v===z?'on':''}" onclick="${onch.replace('Z',"'"+z+"'")}">${SIZE_NAMES[z]}</button>`).join("")}</span>`; }
 function taskCardHTML(tk,i){ tk.subs=tk.subs||[];
   return `<div class="tcard">
@@ -1417,19 +1418,19 @@ const OAI_PROPOSAL_SCHEMA={type:"object",additionalProperties:false,
             title:{type:"string"},
             owner:{type:["string","null"],enum:OWNER_IDS},
             due:{type:["string","null"]},
-            size:{type:["string","null"],enum:["s","m","l","xl",null]},
+            size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM},
             client:{type:["string","null"],enum:CLIENT_NAMES},
             subs:{type:"array",items:{type:"object",additionalProperties:false,
               required:["title","owner","due","size"],
               properties:{title:{type:"string"},owner:{type:["string","null"],enum:OWNER_IDS},
-                due:{type:["string","null"]},size:{type:["string","null"],enum:["s","m","l","xl",null]}}}}
+                due:{type:["string","null"]},size:{type:["string","null"],enum:SIZE_SCHEMA_ENUM}}}}
           }}}
       }}}}};
 async function openaiTranscript(text,key){
   const sys=`You read a raw client/team conversation transcript and extract the NEW engineering projects and tasks it implies, for a 3-level planner (project > task > subtask).
 LANGUAGE: the transcript may be English or French — ALL OUTPUT MUST BE IN ENGLISH.
 - Group work into projects. A customer pilot becomes a project; set its "client" to the matching known client. Pure internal work has client=null.
-- Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (s/m/l/xl or null), client (if the task is for a known client else null), and a subs array (usually empty).
+- Each task: a concise imperative title (no leading article), owner, due (YYYY-MM-DD resolved from context.today, else null), size (xs/s/m/l/xl/xxl or null), client (if the task is for a known client else null), and a subs array (usually empty).
 - ASSIGNEE: infer each owner from this RESPONSIBILITY MAP using the task's content; only null if genuinely unclear:
 ${RESP_MAP_TEXT}
 ${VOCAB_TEXT}

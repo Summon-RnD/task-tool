@@ -124,10 +124,12 @@
   .pill .pop.on{background:var(--green);border-color:var(--green);color:#fff;opacity:1}
   .pill .pbody{display:inline-flex;align-items:center;gap:7px;color:inherit;font:inherit;min-width:0;padding:0}
   .pill .pbody:active{opacity:.6}
+  .pill.sz-xs{font-size:11px;  padding:5px 10px}
   .pill.sz-s {font-size:12px;  padding:6px 12px}
   .pill.sz-m {font-size:13.5px;padding:9px 16px}
   .pill.sz-l {font-size:15.5px;padding:13px 22px}
   .pill.sz-xl{font-size:17px;  padding:17px 28px}
+  .pill.sz-xxl{font-size:18px;padding:18px 30px}
   .pill.late {background:var(--red-soft);color:var(--red)}
   .pill.today{background:var(--accent-soft);color:var(--accent)}
   .pill.soon {background:var(--green-soft);color:var(--green)}
@@ -303,14 +305,16 @@
      space around it reads the same top, bottom and left regardless of bar height */
   .gava{flex:none;position:relative;z-index:2;line-height:0}
   .gava .av{box-shadow:0 0 0 2px rgba(255,255,255,.92)}
+  .gbar.gsz-xs .gava .av{width:16px;height:16px;font-size:8px}
   .gbar.gsz-s .gava .av{width:18px;height:18px;font-size:8.5px}
   .gbar.gsz-m .gava .av{width:26px;height:26px;font-size:11px}
   .gbar.gsz-l .gava .av{width:36px;height:36px;font-size:14px}
   .gbar.gsz-xl .gava .av{width:48px;height:48px;font-size:18px}
-  .gbar.gsz-s{height:26px}.gbar.gsz-m{height:34px}.gbar.gsz-l{height:44px}.gbar.gsz-xl{height:56px}
+  .gbar.gsz-xxl .gava .av{width:54px;height:54px;font-size:19px}
+  .gbar.gsz-xs{height:18px}.gbar.gsz-s{height:26px}.gbar.gsz-m{height:34px}.gbar.gsz-l{height:44px}.gbar.gsz-xl{height:56px}.gbar.gsz-xxl{height:68px}
   .gbar .ttl{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis;pointer-events:none;flex:1;min-width:0;text-align:left;padding-left:1px}
-  .gbar.gsz-s .ttl{font-size:10.5px}.gbar.gsz-l .ttl{font-size:13px}.gbar.gsz-xl .ttl{font-size:14px}
+  .gbar.gsz-xs .ttl{font-size:10px}.gbar.gsz-s .ttl{font-size:10.5px}.gbar.gsz-l .ttl{font-size:13px}.gbar.gsz-xl .ttl{font-size:14px}.gbar.gsz-xxl .ttl{font-size:15px}
   /* title rendered to the right of a too-narrow bar (plain black text, no background) */
   .gttlout{position:absolute;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;
            color:var(--ink);white-space:nowrap;pointer-events:none;z-index:3}
@@ -319,8 +323,10 @@
         display:flex;align-items:center;justify-content:center;
         opacity:0;width:0;margin:0;border-width:0;transition:opacity .12s}
   .gbar:hover .gdot{opacity:1;width:16px;border-width:2px;margin-right:0}
+  .gbar.gsz-xs:hover .gdot{width:12px}
   .gbar.gsz-s:hover .gdot{width:13px}
   .gdot.on{opacity:1;width:16px;border-width:2px;background:#fff;border-color:#fff;color:var(--green)}
+  .gbar.gsz-xs .gdot{width:12px;height:12px}
   .gbar.gsz-s .gdot{width:13px;height:13px}
   .gavb{flex:none;position:relative;z-index:2;margin-left:auto;width:18px;height:18px;border-radius:50%;
         background:#fff;font-size:8.5px;font-weight:800;pointer-events:none;
@@ -381,7 +387,7 @@
   .bm-rw .bm-lbl{margin:0;width:40px;flex:none}
   .bm-rw input[type=date],.bm-rw select{flex:1;min-width:0;font:inherit;font-size:13px;border:1px solid var(--line);
             border-radius:8px;padding:5px 8px;background:var(--bg);color:var(--ink)}
-  .bm-rw .szseg{flex:1;justify-content:space-between}
+  .bm-rw .szseg{flex:1;justify-content:space-between;flex-wrap:wrap;gap:4px}
   /* the "today" band: ends with a hard vertical line — left of it = needs doing today */
   /* today = a wider column with a faint tint, no box */
   /* today tint + week shading stay in the chart body (below the 41px header:
@@ -474,8 +480,8 @@
   .duepill input:focus{outline:none}
   .duepill.sm input{width:96px;font-size:11.5px}
   /* segmented t-shirt size */
-  .szseg{display:inline-flex;background:#eef0f4;border-radius:999px;padding:2px}
-  .szb{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;color:var(--ink-3);line-height:1.5}
+  .szseg{display:inline-flex;flex-wrap:wrap;background:#eef0f4;border-radius:999px;padding:2px;gap:2px}
+  .szb{padding:3px 8px;border-radius:999px;font-size:10.5px;font-weight:800;color:var(--ink-3);line-height:1.5}
   .szb.on{background:var(--accent);color:#fff}
   .tc-sub{display:flex;align-items:center;gap:7px;margin-top:8px;padding-left:14px;position:relative}
   .tc-sub::before{content:"";position:absolute;left:3px;top:4px;bottom:4px;width:2px;background:var(--line);border-radius:2px}
