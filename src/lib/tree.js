@@ -10,6 +10,7 @@ export function createTaskFactory() {
     due: opts.d || null,
     start: opts.st || null,
     size: opts.s || null,
+    comment: opts.comment || null,
     done: opts.done || false,
     doneAt: opts.doneAt || null,
     children: opts.c || [],
@@ -45,6 +46,7 @@ export function normalizeTaskTree(nodes) {
   nodes.forEach((n) => {
     if (!Array.isArray(n.children)) n.children = [];
     if (n.size != null) n.size = normalizeSize(n.size);
+    if (typeof n.comment === "string") n.comment = n.comment.trim() || null;
     normalizeTaskTree(n.children);
   });
 }

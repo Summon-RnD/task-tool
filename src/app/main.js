@@ -34,6 +34,7 @@ const depthOf = (id) => depthOfIn(id, DATA);
 const fitsDepth = (node, destId) => fitsDepthIn(node, destId, DATA);
 
 /* ================= helpers ================= */
+const escText = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 /* size-weighted progress (0..1): done size-points / total size-points across the leaves */
 const progFrac = (n) => { let done = 0, tot = 0; flat([n], (x) => { if (x.children.length) return; const w = sizePts(x.size); tot += w; if (x.done) done += w; }); return tot ? done / tot : 0; };
 function dueChip(due,done){ if(!due||done) return "";
@@ -896,7 +897,8 @@ function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
   else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); }
   else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); }
   else if(f==="size") n.size=v?normalizeSize(v):null;
-  renderAll(); if(!quiet&&f!=="title") openDetail(id); }
+  else if(f==="comment") n.comment=v.trim()||null;
+  renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
   if(typeof confirm!=="undefined"&&!confirm('Delete "'+n.title+'"'+(n.children.length?" and its subtasks":"")+"?")) return;
   snap(); detach(id); closeSheet(); renderAll(); }
@@ -971,12 +973,16 @@ function openDetail(id,opts){
     ? `<div class="frow"><span class="lbl">Size</span><select onchange="updTask(${id},'size',this.value)">
         <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
+  const kind=path.length===1?"project":path.length===2?"task":"subtask";
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
       ${Object.entries(PEOPLE).map(([k,pp])=>`<option value="${k}" ${k===n.owner?'selected':''}>${pp.name}</option>`).join("")}</select></div>
     <div class="frow"><span class="lbl">Start</span><input type="date" value="${n.start||""}" onchange="updTask(${id},'start',this.value)"></div>
     <div class="frow"><span class="lbl">End</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
     ${sizeFld}
+    <div class="frow frow-stack"><span class="lbl">Comment</span>
+      <textarea class="dcomment" rows="3" placeholder="Add a comment on this ${kind}…"
+        onchange="updTask(${id},'comment',this.value,true)">${escText(n.comment)}</textarea></div>
     ${leaf?`<div class="frow"><span class="lbl">Status</span>
       <button class="chip" style="${n.done?'background:var(--green-soft);color:var(--green)':'background:#eef0f4;color:var(--ink-2)'}"
           onclick="toggleDone(${id});openDetail(${id})">${n.done?"Done ✓ — tap to reopen":"In progress — tap to complete"}</button></div>`:""}
