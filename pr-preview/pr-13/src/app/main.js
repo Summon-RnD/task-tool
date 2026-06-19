@@ -1,22 +1,22 @@
 import {
   PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS,
-  SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H,
+  SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=079759b";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=079759b";
+} from "../data/constants.js?v=d3ce510";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=d3ce510";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=079759b";
-import { createDateHelpers } from "../lib/dates.js?v=079759b";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=079759b";
+} from "../lib/tree.js?v=d3ce510";
+import { createDateHelpers } from "../lib/dates.js?v=d3ce510";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=d3ce510";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=079759b";
-import { startBoardSync } from "../lib/board-sync.js?v=079759b";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=079759b";
+} from "../lib/capture.js?v=d3ce510";
+import { startBoardSync } from "../lib/board-sync.js?v=d3ce510";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=d3ce510";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -35,7 +35,7 @@ const fitsDepth = (node, destId) => fitsDepthIn(node, destId, DATA);
 
 /* ================= helpers ================= */
 /* size-weighted progress (0..1): done size-points / total size-points across the leaves */
-const progFrac = (n) => { let done = 0, tot = 0; flat([n], (x) => { if (x.children.length) return; const w = SIZE_PTS[x.size || "m"]; tot += w; if (x.done) done += w; }); return tot ? done / tot : 0; };
+const progFrac = (n) => { let done = 0, tot = 0; flat([n], (x) => { if (x.children.length) return; const w = sizePts(x.size); tot += w; if (x.done) done += w; }); return tot ? done / tot : 0; };
 function dueChip(due,done){ if(!due||done) return "";
   const dd=Math.round((parseLocalIso(due)-TODAY)/864e5);
   const cls=dd<0?"overdue":dd<=3?"soon":"";
@@ -127,7 +127,7 @@ function renderDash(){
     const da=taskDoneAt(n); if(!da) return;
     const ago=Math.round((TODAY-parseLocalIso(da))/864e5);
     if(ago>=0&&ago<=Math.max(HZ,0)) banked.push({n,proj:(path[0]||n).title,dn:true}); });
-  const PT=x=>SIZE_PTS[x.n.size||"m"];
+  const PT=x=>sizePts(x.n.size);
   const pill=(x,cls,side)=>`<div class="pill ${cls} side-${side} sz-${x.n.size||'m'}" data-full="${x.n.title} — ${person(x.n.owner).name} · ${x.proj}">
       <button class="pop ${x.dn?'on':''}" onclick="ding(4);toggleDone(${x.n.id})" aria-label="${x.dn?'Undo':'Mark done'}">${x.dn?'✓':''}</button>
       <button class="pbody" onclick="openDetail(${x.n.id})"><span class="t">${x.n.title}</span></button>
@@ -411,8 +411,8 @@ function renderGantt(){
     if(!n.due) return "";
     const {s,e}=spanFor(n), done=isSub?n.done:taskDone(n);
     if(e<R0G-14||s>R1G) return "";
-    const late=!done&&e<0, [tcs,tce]=barGeom(s,e,done), sz=n.size||"m";
-    const h=isSub?Math.max(15,Math.round(GBAR_H[sz]*0.62)):GBAR_H[sz]; // subtasks shorter than tasks
+    const late=!done&&e<0, [tcs,tce]=barGeom(s,e,done), sz=normalizeSize(n.size);
+    const h=barHeight(sz); // same thickness scale for tasks and subtasks
     // a task with subtasks shows its duration-weighted completion as a darker fill inside its
     // own bar (same two-tone idea as the project summary bar, applied in place)
     const hasKids=!isSub&&n.children.length>0, donePct=hasKids?Math.round(progWD(n)*100):0;
@@ -470,7 +470,7 @@ function renderGantt(){
     any=true;
     const prog=progWD(p), ppc=Math.round(prog*100), spanW=gx(sce)-gx(scs);
     // project bar thickness scales with the project's total weight (sum of its leaf size points)
-    let pPts=0; flat([p],x=>{ if(x.children.length) return; pPts+=SIZE_PTS[x.size||"m"]; });
+    let pPts=0; flat([p],x=>{ if(x.children.length) return; pPts+=sizePts(x.size); });
     const ph=Math.max(7,Math.min(20,Math.round(5+Math.sqrt(pPts)*2.2)));
     rows.push(`<div class="pgroup" data-pid="${p.id}">
       <div class="grow gsumrow" style="min-height:${18+ph+16}px"><div class="gtrack">
@@ -498,7 +498,7 @@ function renderGantt(){
       cand.push({n,e,root,par});
     });
     cand.sort((a,b)=>a.e-b.e
-      ||SIZE_PTS[b.n.size||"m"]-SIZE_PTS[a.n.size||"m"]
+      ||sizePts(b.n.size)-sizePts(a.n.size)
       ||PRW[a.n.priority||"med"]-PRW[b.n.priority||"med"]);
     any=cand.length>0;
     rows.push('<div class="pflat">');
@@ -871,7 +871,7 @@ function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
   else if(f==="priority") n.priority=v;
   else if(f==="due") n.due=v||null;
   else if(f==="start") n.start=v||null;
-  else if(f==="size") n.size=v||null;
+  else if(f==="size") n.size=v?normalizeSize(v):null;
   renderAll(); if(!quiet&&f!=="title") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
   if(typeof confirm!=="undefined"&&!confirm('Delete "'+n.title+'"'+(n.children.length?" and its subtasks":"")+"?")) return;
@@ -918,10 +918,10 @@ function openDetail(id){
     mopts.push(`<option value="${x.id}" ${x.id===par?'disabled':''}>${"&nbsp;".repeat(depth*3)}${x.title}${x.id===par?" (current)":""}</option>`); });
   // Size: leaves carry an editable t-shirt size; projects/parent tasks SHOW the rolled-up
   // point total (sum of their leaves' size points) — not a field the user fills in.
-  let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=SIZE_PTS[x.size||"m"]; });
+  let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=sizePts(x.size); });
   const sizeFld=leaf
     ? `<div class="frow"><span class="lbl">Size</span><select onchange="updTask(${id},'size',this.value)">
-        <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${n.size===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
+        <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
@@ -934,9 +934,9 @@ function openDetail(id){
     <div class="frow"><span class="lbl">Move to</span><select onchange="moveTask(${id},this.value)">${mopts.join("")}</select></div>
     ${path.length>=3?"":`<div class="subhdr">${path.length>1?"Subtasks":"Tasks — grip ⠿ to drag onto another project"}</div>`}
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
-      let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=SIZE_PTS[x.size||"m"]; });
+      let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=sizePts(x.size); });
       const szCtl=lleaf
-        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${ch.size===z?"selected":""}>${SIZE_NAMES[z]}</option>`).join("")}</select>`
+        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`
         : `<span class="rowpts" title="Rolled up from subtasks">${_cp} pts</span>`;
       return `<div class="ptask" data-cid="${ch.id}">
         <button class="grip2" onpointerdown="rowDown(event,${ch.id})" aria-label="Drag onto a project pill in the timeline">${GRIP_SVG}</button>

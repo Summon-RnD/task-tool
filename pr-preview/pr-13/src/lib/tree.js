@@ -1,3 +1,5 @@
+import { normalizeSize } from "../data/constants.js?v=d3ce510";
+
 export function createTaskFactory() {
   let uid = 0;
   const T = (title, o, opts = {}) => ({
@@ -42,7 +44,7 @@ export function findPath(id, nodes, path = []) {
 export function normalizeTaskTree(nodes) {
   nodes.forEach((n) => {
     if (!Array.isArray(n.children)) n.children = [];
-    if (n.size === "xs") n.size = "s";
+    if (n.size != null) n.size = normalizeSize(n.size);
     normalizeTaskTree(n.children);
   });
 }
