@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=d3ce510";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=d3ce510";
+} from "../data/constants.js?v=3500a55";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=3500a55";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=d3ce510";
-import { createDateHelpers } from "../lib/dates.js?v=d3ce510";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=d3ce510";
+} from "../lib/tree.js?v=3500a55";
+import { createDateHelpers } from "../lib/dates.js?v=3500a55";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=3500a55";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=d3ce510";
-import { startBoardSync } from "../lib/board-sync.js?v=d3ce510";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=d3ce510";
+} from "../lib/capture.js?v=3500a55";
+import { startBoardSync } from "../lib/board-sync.js?v=3500a55";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=3500a55";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -326,6 +326,7 @@ function toggleFocus(){ focusToday=!focusToday; const b=$id("gfocusbtn"); if(b)b
 let GVIEW="proj"; // "proj" | "tasks" | "subs"
 let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't jump to top
 let ganttRestoring=false;
+let pageScrollY=0; // window scroll on layouts where .gscroll is horizontal-only
 function setGView(v){ GVIEW=v; defer(renderGantt); }
 function setZoom(i){ ZOOM=i; setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
 function onGanttScroll(){
@@ -342,6 +343,20 @@ function restoreGanttScroll(sc){
   if(typeof requestAnimationFrame!=="undefined")
     requestAnimationFrame(()=>{ apply(); requestAnimationFrame(()=>{ apply(); ganttRestoring=false; }); });
   else ganttRestoring=false;
+}
+function restorePageScroll(){
+  const y=pageScrollY;
+  const apply=()=>{ window.scrollTo(0,y); };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
+}
+function restoreDetailScroll(box,top){
+  if(!box) return;
+  const apply=()=>{ box.scrollTop=top; };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
 }
 function applyBarDrag(n,mode,s,e,s0,e0){
   if(typeof commitBarDrag==="function"){ commitBarDrag(n,mode,s,e,s0,e0); return; }
@@ -512,6 +527,7 @@ function renderGantt(){
   }
   const prevSc=document.querySelector(".gscroll");
   if(prevSc){ ganttScroll.left=prevSc.scrollLeft; ganttScroll.top=prevSc.scrollTop; }
+  pageScrollY=window.scrollY||document.documentElement.scrollTop||0;
   document.getElementById("gantt").innerHTML=
     `<div class="gscroll"><div class="ginner" style="min-width:${(SPAN_EFFV/(VIS-1+TW)*100).toFixed(1)}%">`+
     rows.join("")+
@@ -520,6 +536,7 @@ function renderGantt(){
   const sc=document.querySelector(".gscroll");
   sc.addEventListener("scroll",onGanttScroll,{passive:true});
   restoreGanttScroll(sc);
+  restorePageScroll();
   const gpane=document.querySelector(".gantt");
   if(gpane&&!gpane._floatBound){ gpane._floatBound=true; gpane.addEventListener("scroll",placeFloat,{passive:true}); }
   pinFlags(); placeFloat(); placeOverflowTitles();
@@ -851,7 +868,8 @@ function openBarMenu(id,anchor){
     <div class="bm-lbl">Owner</div>
     <div class="bm-chips">${Object.entries(PEOPLE).map(([k,p])=>`<button class="bm-chip ${n.owner===k?'on':''}" title="${p.name}" onclick="updTask(${id},'owner','${k}',true);refreshBarMenu(${id})"><span class="av xs" style="background:${p.color}">${p.initials}</span></button>`).join("")}</div>
     <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${SIZE_KEYS.map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
-    <div class="bm-rw"><span class="bm-lbl">Due</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
+    <div class="bm-rw"><span class="bm-lbl">Start</span><input type="date" value="${n.start||''}" onchange="updTask(${id},'start',this.value,true)"></div>
+    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
   BM.classList.add("show"); BARMENU=id;
   const mw=BM.offsetWidth||236, mh=BM.offsetHeight||170, gap=8, vw=window.innerWidth, vh=window.innerHeight;
   // sit to the RIGHT of the pill (flip left only if there's no room)
@@ -865,12 +883,18 @@ function refreshBarMenu(id){ if(BARMENU===id) openBarMenu(id); }
 function closeBarMenu(){ BM.classList.remove("show"); BARMENU=null; }
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
+function syncTaskDates(n,field){
+  if(!n.start||!n.due) return;
+  const s=dayN(n.start), e=dayN(n.due);
+  if(isNaN(s)||isNaN(e)||s<=e) return;
+  if(field==="start") n.due=n.start; else n.start=n.due;
+}
 function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due") n.due=v||null;
-  else if(f==="start") n.start=v||null;
+  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); }
+  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); }
   else if(f==="size") n.size=v?normalizeSize(v):null;
   renderAll(); if(!quiet&&f!=="title") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
@@ -885,11 +909,15 @@ function addChild(id){
   if(!path||path.length>=3) return;
   snap();
   const n=path[path.length-1];
-  const taskDue=n.due||dayIso(LEAD.m);
-  n.children.push(T(cap1(v),n.owner,{d:taskDue,s:"m"}));
+  let taskDue=n.due||dayIso(LEAD.m);
+  if(focusToday&&dayN(taskDue)>0) taskDue=dayIso(0); // stay visible when today's-focus filter is on
+  const child=T(cap1(v),n.owner,{d:taskDue,s:"m"});
+  n.children.push(child);
   n.open=true;
+  if(path.length>1&&!subOpen(id)){ if(subsAll) COL.delete(id); else EXP.add(id); } // show new subtask rows on the gantt
   renderAll();
-  openDetail(id);
+  openDetail(id,{reveal:"bottom"});
+  revealGanttTask(child.id);
 }
 function addProject(){
   snap();
@@ -901,9 +929,29 @@ function addProject(){
   if(ti){ ti.focus(); ti.select(); }
 }
 let DETAIL_ID=null;
-function openDetail(id){
+function revealDetailScroll(box,reveal){
+  if(!box||!reveal) return;
+  const apply=()=>{ box.scrollTop=reveal==="bottom"?box.scrollHeight:reveal; };
+  apply();
+  if(typeof requestAnimationFrame!=="undefined")
+    requestAnimationFrame(()=>{ apply(); requestAnimationFrame(apply); });
+}
+function revealGanttTask(id){
+  const run=()=>{
+    const bar=document.querySelector(`#gantt .gbar[data-tid="${id}"]`);
+    if(bar){ bar.scrollIntoView({block:"nearest"}); return; }
+    const path=findPath(id);
+    if(path?.[0]) document.querySelector(`.pgroup[data-pid="${path[0].id}"]`)?.scrollIntoView({block:"nearest"});
+  };
+  if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(()=>requestAnimationFrame(run));
+  else run();
+}
+function openDetail(id,opts){
   const path=findPath(id);
   if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
+  const box=document.querySelector(".tbox");
+  const keepScroll=DETAIL_ID===id;
+  const savedScroll=keepScroll&&box?box.scrollTop:0;
   DETAIL_ID=id;
   const n=path[path.length-1], leaf=!n.children.length;
   document.getElementById("dCrumb").innerHTML=path.length>1
@@ -926,7 +974,8 @@ function openDetail(id){
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
       ${Object.entries(PEOPLE).map(([k,pp])=>`<option value="${k}" ${k===n.owner?'selected':''}>${pp.name}</option>`).join("")}</select></div>
-    <div class="frow"><span class="lbl">Due</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
+    <div class="frow"><span class="lbl">Start</span><input type="date" value="${n.start||""}" onchange="updTask(${id},'start',this.value)"></div>
+    <div class="frow"><span class="lbl">End</span><input type="date" value="${n.due||""}" onchange="updTask(${id},'due',this.value)">${dueChip(n.due,leaf&&n.done)}</div>
     ${sizeFld}
     ${leaf?`<div class="frow"><span class="lbl">Status</span>
       <button class="chip" style="${n.done?'background:var(--green-soft);color:var(--green)':'background:#eef0f4;color:var(--ink-2)'}"
@@ -950,6 +999,8 @@ function openDetail(id){
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
+  if(opts?.reveal) revealDetailScroll(box,opts.reveal);
+  else restoreDetailScroll(box,savedScroll);
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
