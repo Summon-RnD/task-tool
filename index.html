@@ -189,6 +189,11 @@
   .tbox .frow select,.tbox .frow input{flex:1;font:inherit;font-size:15px;border:none;background:transparent;
         color:var(--ink);min-height:34px;-webkit-appearance:none;appearance:none}
   .tbox .frow select:focus,.tbox .frow input:focus{outline:none}
+  .frow-stack{align-items:flex-start}
+  .frow-stack .lbl{padding-top:8px}
+  .tbox .dcomment{flex:1;min-width:0;min-height:72px;resize:vertical;font:inherit;font-size:14px;line-height:1.45;
+        border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fafbfc;color:var(--ink)}
+  .tbox .dcomment:focus{outline:2px solid var(--accent);border-color:transparent;background:#fff}
   /* make the borderless selects (Owner / Size / Move to) read as editable dropdowns:
      size to their value and show a caret + hover so it's clear you can change them */
   .tbox .frow select{flex:0 1 auto;max-width:100%;cursor:pointer;min-height:32px;
@@ -836,6 +841,6 @@
   </div>
 </div>
 
-<script type="module" src="src/app/main.js?v=307d28d"></script>
+<script type="module" src="src/app/main.js?v=a7c66e3"></script>
 </body>
 </html>
