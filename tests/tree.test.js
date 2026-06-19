@@ -57,4 +57,10 @@ describe("tree", () => {
     expect(leaf.children).toEqual([]);
     expect(findPath(1, [root]).map((n) => n.title)).toEqual(["Root", "Leaf"]);
   });
+
+  it("migrates legacy xs size to s", () => {
+    const root = { id: 1, title: "Root", owner: "fd", size: "xs", children: [] };
+    normalizeTaskTree([root]);
+    expect(root.size).toBe("s");
+  });
 });

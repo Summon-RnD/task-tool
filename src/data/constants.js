@@ -36,10 +36,10 @@ export const DOMAIN_RULES = [
   { o: "fd", kw: ["client", "outreach", "fundrais", "recruit", "hiring", "pilot", "sales", "demo", "investor", "contract"] },
 ];
 
-export const SIZE_KEYS = ["xs", "s", "m", "l", "xl", "xxl"];
-export const SIZE_PTS = { xs: 1, s: 1, m: 2, l: 4, xl: 8, xxl: 16 };
-export const SIZE_NAMES = { xs: "XS", s: "S", m: "M", l: "L", xl: "XL", xxl: "XXL" };
-export const LEAD = { xs: 1, s: 1, m: 3, l: 7, xl: 14, xxl: 28 };
+export const SIZE_KEYS = ["s", "m", "l", "xl", "xxl"];
+export const SIZE_PTS = { s: 1, m: 2, l: 4, xl: 6, xxl: 8 };
+export const SIZE_NAMES = { s: "S", m: "M", l: "L", xl: "XL", xxl: "XXL" };
+export const LEAD = { s: 1, m: 3, l: 7, xl: 14, xxl: 28 };
 
 export const ZOOMS = [
   { l: "Day", h: 0, v: 3 },
@@ -48,7 +48,7 @@ export const ZOOMS = [
   { l: "6 weeks", h: 42, v: 42 },
 ];
 
-export const GBAR_H = { xs: 18, s: 26, m: 34, l: 44, xl: 56, xxl: 68 };
+export const GBAR_H = { s: 26, m: 34, l: 44, xl: 56, xxl: 68 };
 export const R0G = 0;
 export const R1G = 90;
 export const SPAN_G = R1G - R0G;
