@@ -290,9 +290,9 @@ function scheduleTodayRefresh() {
 let TW = 2.2, SPAN_EFFV = SPAN_G + 1.2;
 const uDay=t=>t<0?t:(t<1?t*TW:TW+(t-1));       // day → stretched-day units
 const gx=t=>(uDay(t)-R0G)/SPAN_EFFV*100;       // day → % position on the track
-/* a due date means END of that day, and open work never lives in the past:
+/* a due date means END of that day:
    — done tasks keep their historical span
-   — late and due-today tasks ALL span exactly the today box, ending ON the today line
+   — overdue / due-today tasks show their real start through today so resize ears work
    — future tasks start today at the earliest and end at the end of their due day */
 /* re-renders triggered by clicks are deferred out of the input event: mutating the DOM
    while Chrome is still dispatching the click can wedge its hover/input pipeline

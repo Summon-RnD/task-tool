@@ -63,13 +63,14 @@ export function createDateHelpers(today, getRoots = () => null) {
       rs = s;
       re = e + 1;
     } else if (e <= 0) {
-      rs = 0;
-      re = 1;
+      // overdue / due today: keep the real start so resize ears work; stretch through today
+      rs = s;
+      re = Math.max(e + 1, 1);
     } else {
       rs = Math.max(s, 0);
       re = e + 1;
     }
-    const cs = Math.max(rs, r0g);
+    const cs = !done && e <= 0 ? rs : Math.max(rs, r0g);
     return [cs, Math.min(Math.max(re, cs + 0.5), r1g)];
   }
 

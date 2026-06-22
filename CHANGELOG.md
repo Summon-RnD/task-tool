@@ -1,5 +1,10 @@
 # Changelog
 
+## Draggable start on overdue and due-today bars (2026-06-22)
+
+### Fixed
+- Overdue and due-today task bars no longer collapse to a fixed today box; they show the real start date through today so the left resize ear can change the start date on the chart.
+
 ## Independent date editing (2026-06-22)
 
 ### Changed
