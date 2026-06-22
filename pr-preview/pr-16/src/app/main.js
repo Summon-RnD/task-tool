@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=5d5634f";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=5d5634f";
+} from "../data/constants.js?v=a8c89ea";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=a8c89ea";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=5d5634f";
-import { createDateHelpers } from "../lib/dates.js?v=5d5634f";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=5d5634f";
+} from "../lib/tree.js?v=a8c89ea";
+import { createDateHelpers } from "../lib/dates.js?v=a8c89ea";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=a8c89ea";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=5d5634f";
-import { startBoardSync } from "../lib/board-sync.js?v=5d5634f";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=5d5634f";
+} from "../lib/capture.js?v=a8c89ea";
+import { startBoardSync } from "../lib/board-sync.js?v=a8c89ea";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=a8c89ea";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -238,10 +238,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentSpan;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentSpan } = createDateHelpers(TODAY, () => DATA));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -890,12 +890,15 @@ function syncTaskDates(n,field){
   if(isNaN(s)||isNaN(e)||s<=e) return;
   if(field==="start") n.due=n.start; else n.start=n.due;
 }
-function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
+function updTask(id,f,v,quiet){ snap(); const path=findPath(id); const n=path.pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); clipLeavesToParentSpan(n); }
-  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); clipLeavesToParentSpan(n); }
+  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due");
+    if(path.length===1) clipLeavesToParentDue(n);
+    else if(path.length===2) clipLeafToParentDue(n, path[1]); }
+  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start");
+    if(path.length===2) clipLeafToParentDue(n, path[1]); }
   else if(f==="size") n.size=v?normalizeSize(v):null;
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }

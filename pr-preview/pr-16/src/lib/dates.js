@@ -1,10 +1,10 @@
-import { LEAD } from "../data/constants.js?v=5d5634f";
-import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=5d5634f";
-import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=5d5634f";
-import { flat, kids } from "./tree.js?v=5d5634f";
-import { taskDone } from "./tree.js?v=5d5634f";
+import { LEAD } from "../data/constants.js?v=a8c89ea";
+import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=a8c89ea";
+import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=a8c89ea";
+import { flat, kids, findPath } from "./tree.js?v=a8c89ea";
+import { taskDone } from "./tree.js?v=a8c89ea";
 
-export { dayN, dayIso } from "./date-core.js?v=5d5634f";
+export { dayN, dayIso } from "./date-core.js?v=a8c89ea";
 
 export function createDateHelpers(today, getRoots = () => null) {
   const dayNLocal = (iso) => dayN(iso, today);
@@ -95,43 +95,30 @@ export function createDateHelpers(today, getRoots = () => null) {
 
   const spanFor = (n) => (kids(n).length ? rollupSpan(n) : barSpan(n));
 
-  function clampLeafToSpan(leaf, minS, maxE) {
+  function clampLeafEnd(leaf, maxE) {
     const sp = barSpan(leaf);
-    let newS = sp.s;
-    let newE = sp.e;
-    const dur = newE - newS;
-    if (newS < minS) {
-      newS = minS;
-      newE = newS + dur;
-    }
-    if (newE > maxE) {
-      newE = maxE;
-      newS = newE - dur;
-    }
-    if (newS < minS) {
-      newS = minS;
-      newE = Math.min(newS + dur, maxE);
-    }
-    if (newE > maxE) {
-      newE = maxE;
-      newS = Math.max(newE - dur, minS);
-    }
-    if (newS > newE) {
-      newS = minS;
-      newE = maxE;
-    }
+    if (sp.e <= maxE) return;
+    const dur = sp.e - sp.s;
+    let newE = maxE;
+    let newS = newE - dur;
+    if (newS > newE) newS = newE;
     leaf.start = dayIsoLocal(newS);
     leaf.due = dayIsoLocal(newE);
   }
 
-  /** Shrink subtasks that exceed a parent task's explicit start/due bounds. */
-  function clipLeavesToParentSpan(n) {
+  /** Shorten a subtask that extends past its parent task's due date. */
+  function clipLeafToParentDue(leaf, parent) {
+    if (!parent?.due || kids(leaf).length) return;
+    clampLeafEnd(leaf, dayNLocal(parent.due));
+  }
+
+  /** Shorten any subtasks that extend past the parent task's due date. */
+  function clipLeavesToParentDue(n) {
     if (!taskWithSubtasks(n) || !n.due) return;
     const maxE = dayNLocal(n.due);
-    const minS = n.start ? dayNLocal(n.start) : -Infinity;
     flat([n], (x) => {
       if (kids(x).length || !x.due) return;
-      clampLeafToSpan(x, minS, maxE);
+      clampLeafEnd(x, maxE);
     });
   }
 
@@ -184,6 +171,11 @@ export function createDateHelpers(today, getRoots = () => null) {
         if (!n.start) n.start = dayIsoLocal(s0);
         n.due = dayIsoLocal(e);
       }
+      const roots = getRoots();
+      if (roots && n.id) {
+        const path = findPath(n.id, roots);
+        if (path?.length === 3) clipLeafToParentDue(n, path[1]);
+      }
       return;
     }
     const old = spanFor(n);
@@ -193,11 +185,10 @@ export function createDateHelpers(today, getRoots = () => null) {
     }
     if (mode === "l") {
       n.start = dayIsoLocal(s);
-      clipLeavesToParentSpan(n);
       return;
     }
     n.due = dayIsoLocal(e);
-    clipLeavesToParentSpan(n);
+    clipLeavesToParentDue(n);
   }
 
   return {
@@ -214,7 +205,8 @@ export function createDateHelpers(today, getRoots = () => null) {
     isUrgent,
     fmtD,
     commitBarDrag,
-    clipLeavesToParentSpan,
+    clipLeavesToParentDue,
+    clipLeafToParentDue,
     taskWithSubtasks,
   };
 }
