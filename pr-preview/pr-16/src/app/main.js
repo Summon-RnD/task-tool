@@ -3,21 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=56557db";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=56557db";
+} from "../data/constants.js?v=58a07bf";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=58a07bf";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-  sortSubtreeByStart,
-} from "../lib/tree.js?v=56557db";
-import { createDateHelpers } from "../lib/dates.js?v=56557db";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=56557db";
+} from "../lib/tree.js?v=58a07bf";
+import { createDateHelpers } from "../lib/dates.js?v=58a07bf";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=58a07bf";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=56557db";
-import { startBoardSync } from "../lib/board-sync.js?v=56557db";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=56557db";
+} from "../lib/capture.js?v=58a07bf";
+import { startBoardSync } from "../lib/board-sync.js?v=58a07bf";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=58a07bf";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -239,10 +238,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, expandParentToFitSubtasks;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, expandParentToFitSubtasks } = createDateHelpers(TODAY, () => DATA));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -276,8 +275,8 @@ function scheduleTodayRefresh() {
 }
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
-/* a parent task's bar uses its own dates/size but grows when subtasks extend
-   past it — never shrinks. Projects still roll up across all descendant leaves. */
+/* a parent task's bar uses its own dates/size; subtask edits do not change it.
+   Projects still roll up across all descendant leaves. */
 /* effort weight = working days (Mon–Fri) inside a leaf's bar span, so the team doesn't have
    to size every item — a longer subtask simply weighs more. A set size still counts, because
    size feeds the bar's span via LEAD, which feeds this. Min 1 so a single-day or weekend-only
@@ -873,11 +872,6 @@ let BARMENU=null;
 const BM=document.createElement("div"); BM.id="barMenu"; BM.className="barmenu"; document.body.appendChild(BM);
 function openBarMenu(id,anchor){
   const path=findPath(id); if(!path) return; const n=path.pop();
-  const depth=path.length;
-  const sortBtn=(depth===0||depth===1)
-    ? `<button type="button" class="bm-item bm-sort" onclick="sortByStartDate(${id})"
-        title="Reorder ${depth===0?"tasks and subtasks":"subtasks"} by start date">Sort by start date</button>`
-    : "";
   if(anchor&&anchor.getBoundingClientRect) anchor=anchor.getBoundingClientRect();
   if(anchor) BM._anchor={left:anchor.left,right:anchor.right,top:anchor.top,bottom:anchor.bottom};
   const a=BM._anchor||{left:100,right:160,top:100,bottom:130};
@@ -886,8 +880,7 @@ function openBarMenu(id,anchor){
     <div class="bm-chips">${Object.entries(PEOPLE).map(([k,p])=>`<button class="bm-chip ${n.owner===k?'on':''}" title="${p.name}" onclick="updTask(${id},'owner','${k}',true);refreshBarMenu(${id})"><span class="av xs" style="background:${p.color}">${p.initials}</span></button>`).join("")}</div>
     <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${SIZE_KEYS.map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
     <div class="bm-rw"><span class="bm-lbl">Start</span><input type="date" value="${n.start||''}" onchange="updTask(${id},'start',this.value,true)"></div>
-    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>
-    ${sortBtn}`;
+    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
   BM.classList.add("show"); BARMENU=id;
   const mw=BM.offsetWidth||236, mh=BM.offsetHeight||170, gap=8, vw=window.innerWidth, vh=window.innerHeight;
   // sit to the RIGHT of the pill (flip left only if there's no room)
@@ -899,39 +892,15 @@ function openBarMenu(id,anchor){
 }
 function refreshBarMenu(id){ if(BARMENU===id) openBarMenu(id); }
 function closeBarMenu(){ BM.classList.remove("show"); BARMENU=null; }
-function startSortKey(n){
-  const { s }=barSpan(n);
-  return (n.due||n.start)&&!isNaN(s)?s:Infinity;
-}
-function sortByStartDate(id){
-  const path=findPath(id);
-  if(!path||path.length>2) return;
-  snap();
-  sortSubtreeByStart(path[path.length-1], startSortKey);
-  renderAll();
-  ding(1);
-  if(DETAIL_ID===id) openDetail(id);
-  else if(BARMENU===id) refreshBarMenu(id);
-}
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
-function syncTaskDates(n,field){
-  if(!n.start||!n.due) return;
-  const s=dayN(n.start), e=dayN(n.due);
-  if(isNaN(s)||isNaN(e)||s<=e) return;
-  if(field==="start") n.due=n.start; else n.start=n.due;
-}
 function updTask(id,f,v,quiet){ snap(); const path=findPath(id); const n=path.pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due");
-    if(path.length===1) clipLeavesToParentDue(n);
-    else if(path.length===2) expandParentToFitSubtasks(path[1]); }
-  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start");
-    if(path.length===2) expandParentToFitSubtasks(path[1]); }
-  else if(f==="size"){ n.size=v?normalizeSize(v):null;
-    if(path.length===2) expandParentToFitSubtasks(path[1]); }
+  else if(f==="due") n.due=v||null;
+  else if(f==="start") n.start=v||null;
+  else if(f==="size") n.size=v?normalizeSize(v):null;
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
@@ -1033,13 +1002,6 @@ function openDetail(id,opts){
         <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
   const kind=path.length===1?"project":path.length===2?"task":"subtask";
-  const listHdr=path.length===1
-    ? `<span>Tasks — grip ⠿ to drag onto another project</span>`
-    : `<span>Subtasks</span>`;
-  const sortBtn=path.length<=2
-    ? `<button type="button" class="subsort" onclick="sortByStartDate(${id})"
-        title="Reorder ${path.length===1?"tasks and subtasks":"subtasks"} by start date">Sort by start date</button>`
-    : "";
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
       ${Object.entries(PEOPLE).map(([k,pp])=>`<option value="${k}" ${k===n.owner?'selected':''}>${pp.name}</option>`).join("")}</select></div>
@@ -1053,7 +1015,7 @@ function openDetail(id,opts){
       <button class="chip" style="${n.done?'background:var(--green-soft);color:var(--green)':'background:#eef0f4;color:var(--ink-2)'}"
           onclick="toggleDone(${id});openDetail(${id})">${n.done?"Done ✓ — tap to reopen":"In progress — tap to complete"}</button></div>`:""}
     <div class="frow"><span class="lbl">Move to</span><select onchange="moveTask(${id},this.value)">${mopts.join("")}</select></div>
-    ${path.length>=3?"":`<div class="subhdr">${listHdr}${sortBtn}</div>`}
+    ${path.length>=3?"":`<div class="subhdr">${path.length>1?"Subtasks":"Tasks — grip ⠿ to drag onto another project"}</div>`}
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
       const szCtl=`<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`;
       return `<div class="ptask" data-cid="${ch.id}">
@@ -1737,7 +1699,7 @@ const _globals = {
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
-  toggleExp, updTask, refreshBarMenu, sortByStartDate, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
+  toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   projDown, rowDown,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
   doSearch, refreshCard, delCapTask, setTask, setTaskOwner, setTaskSize, setSub, setSubOwner, addSub,
