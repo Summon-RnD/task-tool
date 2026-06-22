@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskFactory, counts, findPath, normalizeTaskTree, pct, progFrac, taskDone, taskDoneAt } from "../src/lib/tree.js";
+import { createTaskFactory, counts, findPath, normalizeTaskTree, pct, progFrac, sortSubtreeByStart, taskDone, taskDoneAt } from "../src/lib/tree.js";
 import { SIZE_PTS } from "../src/data/constants.js";
 
 describe("tree", () => {
@@ -73,5 +73,26 @@ describe("tree", () => {
   it("stores comments on created tasks", () => {
     const task = T("Task", "sk", { comment: "Needs review" });
     expect(task.comment).toBe("Needs review");
+  });
+
+  it("sorts children and subtasks by start key", () => {
+    const root = T("Project", "ia", {
+      c: [
+        T("Late task", "sk", { d: "2026-06-30", st: "2026-06-20", c: [
+          T("Sub B", "sk", { d: "2026-06-25", st: "2026-06-22", c: [] }),
+          T("Sub A", "sk", { d: "2026-06-18", st: "2026-06-15", c: [] }),
+        ] }),
+        T("Early task", "sk", { d: "2026-06-15", st: "2026-06-10", c: [] }),
+        T("No dates", "sk", { c: [] }),
+      ],
+    });
+    const key = (n) => {
+      if (n.start) return Date.parse(n.start);
+      if (n.due) return Date.parse(n.due);
+      return Infinity;
+    };
+    sortSubtreeByStart(root, key);
+    expect(root.children.map((c) => c.title)).toEqual(["Early task", "Late task", "No dates"]);
+    expect(root.children[1].children.map((c) => c.title)).toEqual(["Sub A", "Sub B"]);
   });
 });
