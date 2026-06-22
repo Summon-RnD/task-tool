@@ -923,6 +923,7 @@ function addChild(id){
   if(path.length>1&&!subOpen(id)){ if(subsAll) COL.delete(id); else EXP.add(id); } // show new subtask rows on the gantt
   renderAll();
   openDetail(id,{reveal:"bottom"});
+  requestAnimationFrame(()=>document.getElementById("dSubNew")?.focus());
   revealGanttTask(child.id);
 }
 function addProject(){
@@ -1001,13 +1002,19 @@ function openDetail(id,opts){
         ${ownerPill(ch.owner,`updTask(${ch.id},'owner',this.value,true);openDetail(${id})`)}
         ${szCtl}
         ${dueChip(ch.due,lleaf&&ch.done)}</div>`;}).join("")}
-    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();addChild(${id});}"><button type="button" onclick="addChild(${id})">Add</button></div>`}
+    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…">
+      <button type="button" onclick="addChild(${id})">Add</button></div>`}
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
   if(opts?.reveal) revealDetailScroll(box,opts.reveal);
   else restoreDetailScroll(box,savedScroll);
+  const subNew=document.getElementById("dSubNew");
+  if(subNew) subNew.onkeydown=e=>{
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    addChild(id);
+  };
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
