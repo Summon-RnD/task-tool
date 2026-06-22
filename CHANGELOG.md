@@ -6,6 +6,7 @@
 - Parent tasks keep their own t-shirt size in the detail sheet; subtask sizes no longer replace it.
 - Parent tasks grow when subtasks extend past their dates (including earlier starts and later ends), but never shrink when subtasks move inward. Narrowing a parent due date still clips subtasks.
 - Press Enter in the subtask input on the detail sheet to add a subtask without clicking Add.
+- Detail pop-ups for projects, tasks, and subtasks include a Save button that flushes pending edits, persists, and closes the sheet.
 - Projects still roll up dates and size points across all descendant leaves.
 
 ## Rebase PR #14 onto main (2026-06-19)
