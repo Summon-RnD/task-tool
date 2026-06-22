@@ -5,7 +5,7 @@
 ### Changed
 - Parent tasks keep their own t-shirt size in the detail sheet; subtask sizes no longer replace it.
 - Gantt bars for tasks with subtasks use only the task's own dates/size; subtask date edits never change the parent bar.
-- Parent task gantt resize/drag updates only the parent unless the window shrinks (then subtasks clip to fit).
+- Subtasks that extend past a parent task's due date are shortened to end on that date (including when the subtask is edited directly). Parent start changes do not affect subtasks.
 - Projects still roll up dates and size points across all descendant leaves.
 
 ## Rebase PR #14 onto main (2026-06-19)

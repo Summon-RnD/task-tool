@@ -238,10 +238,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentSpan;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentSpan } = createDateHelpers(TODAY, () => DATA));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -890,12 +890,15 @@ function syncTaskDates(n,field){
   if(isNaN(s)||isNaN(e)||s<=e) return;
   if(field==="start") n.due=n.start; else n.start=n.due;
 }
-function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
+function updTask(id,f,v,quiet){ snap(); const path=findPath(id); const n=path.pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); clipLeavesToParentSpan(n); }
-  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); clipLeavesToParentSpan(n); }
+  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due");
+    if(path.length===1) clipLeavesToParentDue(n);
+    else if(path.length===2) clipLeafToParentDue(n, path[1]); }
+  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start");
+    if(path.length===2) clipLeafToParentDue(n, path[1]); }
   else if(f==="size") n.size=v?normalizeSize(v):null;
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
