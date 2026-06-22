@@ -37,7 +37,7 @@ describe("dates", () => {
     expect(h.spanFor(leaf).e).toBe(8);
   });
 
-  it("uses only the parent task's own span regardless of subtask dates", () => {
+  it("expands a parent task when subtasks extend outside its dates", () => {
     const parent = {
       due: "2026-06-30",
       size: "m",
@@ -48,7 +48,9 @@ describe("dates", () => {
     };
     const own = h.barSpan(parent);
     const span = h.rollupSpan(parent);
-    expect(span).toEqual(own);
+    expect(span.e).toBe(own.e);
+    expect(span.s).toBe(h.barSpan(parent.children[0]).s);
+    expect(span.s).toBeLessThan(own.s);
   });
 
   it("does not shrink a parent task when subtasks fall inside its dates", () => {
@@ -64,15 +66,27 @@ describe("dates", () => {
     expect(span.e).toBe(own.e);
   });
 
-  it("does not expand a parent task when a subtask is scheduled outside its dates", () => {
+  it("expands the parent task when a subtask due date is moved later", () => {
     const parent = {
       due: "2026-06-20",
       size: "m",
       children: [{ due: "2026-07-05", size: "s", children: [] }],
     };
-    const own = h.barSpan(parent);
-    parent.children[0].due = "2026-07-10";
-    expect(h.spanFor(parent)).toEqual(own);
+    const ownE = h.barSpan(parent).e;
+    h.expandParentToFitSubtasks(parent);
+    expect(h.dayN(parent.due)).toBeGreaterThan(ownE);
+    expect(h.spanFor(parent).e).toBe(h.barSpan(parent.children[0]).e);
+  });
+
+  it("expands the parent task start when a subtask begins earlier", () => {
+    const parent = {
+      start: "2026-06-20",
+      due: "2026-06-30",
+      size: "m",
+      children: [{ due: "2026-06-14", size: "s", children: [] }],
+    };
+    h.expandParentToFitSubtasks(parent);
+    expect(h.dayN(parent.start)).toBe(h.barSpan(parent.children[0]).s);
   });
 
   it("clips subtasks when a parent task's end date moves earlier", () => {
@@ -87,19 +101,18 @@ describe("dates", () => {
     expect(h.barSpan(parent.children[0]).e).toBe(h.dayN(parent.due));
   });
 
-  it("clips a subtask when its due date extends past the parent task", () => {
-    const parent = { due: "2026-06-30", size: "m", children: [] };
-    const sub = { due: "2026-07-05", size: "m", children: [] };
-    h.clipLeafToParentDue(sub, parent);
-    expect(h.dayN(sub.due)).toBe(h.dayN(parent.due));
-  });
-
-  it("does not lengthen a subtask when it ends before the parent task", () => {
-    const parent = { due: "2026-06-30", size: "m", children: [] };
-    const sub = { due: "2026-06-20", size: "s", children: [] };
-    const before = sub.due;
-    h.clipLeafToParentDue(sub, parent);
-    expect(sub.due).toBe(before);
+  it("does not shrink a parent task when subtasks are moved inward", () => {
+    const parent = {
+      start: "2026-06-10",
+      due: "2026-06-30",
+      size: "m",
+      children: [{ due: "2026-06-20", size: "s", children: [] }],
+    };
+    const dueBefore = parent.due;
+    const startBefore = parent.start;
+    h.expandParentToFitSubtasks(parent);
+    expect(parent.due).toBe(dueBefore);
+    expect(parent.start).toBe(startBefore);
   });
 
   it("does not clip subtasks when only the parent start date changes", () => {
