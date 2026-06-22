@@ -3,21 +3,21 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=8d36f2d";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=8d36f2d";
+} from "../data/constants.js?v=56557db";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=56557db";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
   sortSubtreeByStart,
-} from "../lib/tree.js?v=8d36f2d";
-import { createDateHelpers } from "../lib/dates.js?v=8d36f2d";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=8d36f2d";
+} from "../lib/tree.js?v=56557db";
+import { createDateHelpers } from "../lib/dates.js?v=56557db";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=56557db";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=8d36f2d";
-import { startBoardSync } from "../lib/board-sync.js?v=8d36f2d";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=8d36f2d";
+} from "../lib/capture.js?v=56557db";
+import { startBoardSync } from "../lib/board-sync.js?v=56557db";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=56557db";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -910,7 +910,8 @@ function sortByStartDate(id){
   sortSubtreeByStart(path[path.length-1], startSortKey);
   renderAll();
   ding(1);
-  if(BARMENU===id) refreshBarMenu(id);
+  if(DETAIL_ID===id) openDetail(id);
+  else if(BARMENU===id) refreshBarMenu(id);
 }
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
@@ -1032,6 +1033,13 @@ function openDetail(id,opts){
         <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
   const kind=path.length===1?"project":path.length===2?"task":"subtask";
+  const listHdr=path.length===1
+    ? `<span>Tasks — grip ⠿ to drag onto another project</span>`
+    : `<span>Subtasks</span>`;
+  const sortBtn=path.length<=2
+    ? `<button type="button" class="subsort" onclick="sortByStartDate(${id})"
+        title="Reorder ${path.length===1?"tasks and subtasks":"subtasks"} by start date">Sort by start date</button>`
+    : "";
   document.getElementById("dBody").innerHTML=`
     <div class="frow"><span class="lbl">Owner</span>${av(n.owner)}<select onchange="updTask(${id},'owner',this.value)">
       ${Object.entries(PEOPLE).map(([k,pp])=>`<option value="${k}" ${k===n.owner?'selected':''}>${pp.name}</option>`).join("")}</select></div>
@@ -1045,7 +1053,7 @@ function openDetail(id,opts){
       <button class="chip" style="${n.done?'background:var(--green-soft);color:var(--green)':'background:#eef0f4;color:var(--ink-2)'}"
           onclick="toggleDone(${id});openDetail(${id})">${n.done?"Done ✓ — tap to reopen":"In progress — tap to complete"}</button></div>`:""}
     <div class="frow"><span class="lbl">Move to</span><select onchange="moveTask(${id},this.value)">${mopts.join("")}</select></div>
-    ${path.length>=3?"":`<div class="subhdr">${path.length>1?"Subtasks":"Tasks — grip ⠿ to drag onto another project"}</div>`}
+    ${path.length>=3?"":`<div class="subhdr">${listHdr}${sortBtn}</div>`}
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
       const szCtl=`<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`;
       return `<div class="ptask" data-cid="${ch.id}">
