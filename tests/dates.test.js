@@ -37,7 +37,7 @@ describe("dates", () => {
     expect(h.spanFor(leaf).e).toBe(8);
   });
 
-  it("rolls parent span across child leaves", () => {
+  it("uses only the parent task's own span regardless of subtask dates", () => {
     const parent = {
       due: "2026-06-30",
       size: "m",
@@ -46,11 +46,9 @@ describe("dates", () => {
         { due: "2026-06-22", size: "m", children: [] },
       ],
     };
+    const own = h.barSpan(parent);
     const span = h.rollupSpan(parent);
-    expect(span.s).toBeLessThanOrEqual(span.e);
-    // parent end (Jun 30) wins over subtasks; earliest subtask still extends the left edge
-    expect(span.s).toBe(2);
-    expect(span.e).toBe(18);
+    expect(span).toEqual(own);
   });
 
   it("does not shrink a parent task when subtasks fall inside its dates", () => {
@@ -66,17 +64,15 @@ describe("dates", () => {
     expect(span.e).toBe(own.e);
   });
 
-  it("expands a parent task when a subtask is scheduled outside its dates", () => {
+  it("does not expand a parent task when a subtask is scheduled outside its dates", () => {
     const parent = {
       due: "2026-06-20",
       size: "m",
       children: [{ due: "2026-07-05", size: "s", children: [] }],
     };
     const own = h.barSpan(parent);
-    const span = h.spanFor(parent);
-    expect(span.s).toBe(own.s);
-    expect(span.e).toBeGreaterThan(own.e);
-    expect(span.e).toBe(h.barSpan(parent.children[0]).e);
+    parent.children[0].due = "2026-07-10";
+    expect(h.spanFor(parent)).toEqual(own);
   });
 
   it("clips subtasks when a parent task's end date moves earlier", () => {
@@ -125,7 +121,7 @@ describe("dates", () => {
     expect(h.spanFor(parent).e).toBe(before.e + 3);
   });
 
-  it("resizes a parent task rollup from the right edge", () => {
+  it("extends only the parent task when its bar is resized on the right", () => {
     const parent = {
       due: "2026-06-30",
       size: "m",
@@ -135,8 +131,9 @@ describe("dates", () => {
       ],
     };
     const before = h.spanFor(parent);
+    const subDue = parent.children[1].due;
     h.commitBarDrag(parent, "r", before.s, before.e + 2, before.s, before.e);
     expect(h.spanFor(parent).e).toBe(before.e + 2);
-    expect(h.dayN(parent.children[1].due)).toBe(h.dayN("2026-06-24"));
+    expect(parent.children[1].due).toBe(subDue);
   });
 });
