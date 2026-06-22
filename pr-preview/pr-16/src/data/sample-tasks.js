@@ -1,4 +1,4 @@
-import { PEOPLE } from "./constants.js?v=a4a27da";
+import { PEOPLE } from "./constants.js?v=6ec8f77";
 
 export function buildSampleTasks(T) {
   const data = [

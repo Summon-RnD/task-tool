@@ -282,6 +282,14 @@
   /* project group: a thin summary bar spanning the project's task range, then its tasks */
   .pgroup{position:relative;margin-top:22px;padding:2px 0 8px}
   .pgroup:first-of-type{margin-top:0;padding-top:0}
+  /* clickable project wash — empty chart space opens the project to add tasks */
+  .pgclick{position:absolute;top:0;bottom:0;z-index:0;cursor:pointer;
+        background:rgba(59,110,246,.05);border-radius:10px;transition:background .15s}
+  .pgclick:hover{background:rgba(59,110,246,.1)}
+  .pgroup>.grow{position:relative;z-index:1}
+  .pgroup .gtrack{pointer-events:none}
+  .pgroup .gbar,.pgroup .gsumlbl,.pgroup .gsumpct,.pgroup .gsumline,.pgroup .gsumfill,
+  .pgroup .gexp,.pgroup .gexpw,.pgroup .ear,.pgroup .gdot,.pgroup .gttlout{pointer-events:auto}
   /* project header: name on its own line, the progress bar on the line below it */
   /* top-align so the row's extra height (the gap before the first task) stays BELOW the bar,
      instead of being centered and pushing the project name down away from the ribbon */
@@ -848,6 +856,6 @@
   </div>
 </div>
 
-<script type="module" src="src/app/main.js?v=a4a27da"></script>
+<script type="module" src="src/app/main.js?v=6ec8f77"></script>
 </body>
 </html>
