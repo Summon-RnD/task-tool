@@ -1,5 +1,13 @@
 # Changelog
 
+## Parent task priority over subtasks (2026-06-22)
+
+### Changed
+- Parent tasks keep their own t-shirt size in the detail sheet; subtask sizes no longer replace it.
+- Gantt bars for tasks with subtasks use the task's own dates/size as the baseline and only expand when a subtask falls outside that window.
+- Editing a parent task's start or end date clips subtasks that extend past the new bounds.
+- Projects still roll up dates and size points across all descendant leaves.
+
 ## Rebase PR #14 onto main (2026-06-19)
 
 ### Fixed

@@ -238,10 +238,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentSpan;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag } = createDateHelpers(TODAY));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentSpan } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -275,8 +275,8 @@ function scheduleTodayRefresh() {
 }
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
-/* a parent task's bar always spans its subtasks (start = earliest sub start, due = latest sub due),
-   so a parent can never appear to start after its own subtasks */
+/* a parent task's bar spans its own dates/size; subtasks may only extend it outward
+   (never shrink it). Projects still roll up across all descendant leaves. */
 /* effort weight = working days (Mon–Fri) inside a leaf's bar span, so the team doesn't have
    to size every item — a longer subtask simply weighs more. A set size still counts, because
    size feeds the bar's span via LEAD, which feeds this. Min 1 so a single-day or weekend-only
@@ -894,8 +894,8 @@ function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); }
-  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); }
+  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); clipLeavesToParentSpan(n); }
+  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); clipLeavesToParentSpan(n); }
   else if(f==="size") n.size=v?normalizeSize(v):null;
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
@@ -966,10 +966,10 @@ function openDetail(id,opts){
   flat(DATA,(x,depth)=>{ if(contains(n,x.id))return;
     if(depth+1+heightOf(n)>2) return; // keep the 3-level hierarchy
     mopts.push(`<option value="${x.id}" ${x.id===par?'disabled':''}>${"&nbsp;".repeat(depth*3)}${x.title}${x.id===par?" (current)":""}</option>`); });
-  // Size: leaves carry an editable t-shirt size; projects/parent tasks SHOW the rolled-up
-  // point total (sum of their leaves' size points) — not a field the user fills in.
+  // Size: subtasks and parent tasks carry an editable t-shirt size; projects show rolled-up points.
   let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=sizePts(x.size); });
-  const sizeFld=leaf
+  const sizeEditable=leaf||path.length===2;
+  const sizeFld=sizeEditable
     ? `<div class="frow"><span class="lbl">Size</span><select onchange="updTask(${id},'size',this.value)">
         <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
@@ -989,10 +989,7 @@ function openDetail(id,opts){
     <div class="frow"><span class="lbl">Move to</span><select onchange="moveTask(${id},this.value)">${mopts.join("")}</select></div>
     ${path.length>=3?"":`<div class="subhdr">${path.length>1?"Subtasks":"Tasks — grip ⠿ to drag onto another project"}</div>`}
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
-      let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=sizePts(x.size); });
-      const szCtl=lleaf
-        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`
-        : `<span class="rowpts" title="Rolled up from subtasks">${_cp} pts</span>`;
+      const szCtl=`<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`;
       return `<div class="ptask" data-cid="${ch.id}">
         <button class="grip2" onpointerdown="rowDown(event,${ch.id})" aria-label="Drag onto a project pill in the timeline">${GRIP_SVG}</button>
         <button class="check ${lleaf?(ch.done?'on':''):(lp===100?'on':'')}" onclick="toggleDone(${ch.id});openDetail(${id})">${(lleaf?ch.done:lp===100)?'✓':''}</button>
