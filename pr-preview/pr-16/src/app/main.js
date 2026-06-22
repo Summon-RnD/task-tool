@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=e0b31b4";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=e0b31b4";
+} from "../data/constants.js?v=9cc08cb";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=9cc08cb";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=e0b31b4";
-import { createDateHelpers } from "../lib/dates.js?v=e0b31b4";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=e0b31b4";
+} from "../lib/tree.js?v=9cc08cb";
+import { createDateHelpers } from "../lib/dates.js?v=9cc08cb";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=9cc08cb";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=e0b31b4";
-import { startBoardSync } from "../lib/board-sync.js?v=e0b31b4";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=e0b31b4";
+} from "../lib/capture.js?v=9cc08cb";
+import { startBoardSync } from "../lib/board-sync.js?v=9cc08cb";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=9cc08cb";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -923,6 +923,7 @@ function addChild(id){
   if(path.length>1&&!subOpen(id)){ if(subsAll) COL.delete(id); else EXP.add(id); } // show new subtask rows on the gantt
   renderAll();
   openDetail(id,{reveal:"bottom"});
+  requestAnimationFrame(()=>document.getElementById("dSubNew")?.focus());
   revealGanttTask(child.id);
 }
 function addProject(){
@@ -1001,13 +1002,19 @@ function openDetail(id,opts){
         ${ownerPill(ch.owner,`updTask(${ch.id},'owner',this.value,true);openDetail(${id})`)}
         ${szCtl}
         ${dueChip(ch.due,lleaf&&ch.done)}</div>`;}).join("")}
-    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();addChild(${id});}"><button type="button" onclick="addChild(${id})">Add</button></div>`}
+    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…">
+      <button type="button" onclick="addChild(${id})">Add</button></div>`}
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
   if(opts?.reveal) revealDetailScroll(box,opts.reveal);
   else restoreDetailScroll(box,savedScroll);
+  const subNew=document.getElementById("dSubNew");
+  if(subNew) subNew.onkeydown=e=>{
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    addChild(id);
+  };
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
