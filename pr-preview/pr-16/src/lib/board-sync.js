@@ -1,6 +1,6 @@
-import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=6ec8f77";
-import { todayLocalIso } from "./date-core.js?v=6ec8f77";
-import { flat, normalizeTaskTree } from "./tree.js?v=6ec8f77";
+import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=2daf17e";
+import { todayLocalIso } from "./date-core.js?v=2daf17e";
+import { flat, normalizeTaskTree } from "./tree.js?v=2daf17e";
 
 function maxTaskId(nodes) {
   let m = 0;

@@ -283,10 +283,11 @@
   .pgroup{position:relative;margin-top:22px;padding:2px 0 8px}
   .pgroup:first-of-type{margin-top:0;padding-top:0}
   /* clickable project wash — empty chart space opens the project to add tasks */
-  .pgclick{position:absolute;top:0;bottom:0;z-index:0;cursor:pointer;
-        background:rgba(59,110,246,.05);border-radius:10px;transition:background .15s}
-  .pgclick:hover{background:rgba(59,110,246,.1)}
-  .pgroup>.grow{position:relative;z-index:1}
+  .pgclick{position:absolute;inset:0;z-index:0;cursor:pointer;border:none;padding:0;background:transparent;font:inherit}
+  .pgwash{position:absolute;top:0;bottom:0;background:rgba(59,110,246,.05);border-radius:10px;
+        transition:background .15s;pointer-events:none}
+  .pgclick:hover .pgwash{background:rgba(59,110,246,.1)}
+  .pgroup>.grow{position:relative;z-index:1;pointer-events:none}
   .pgroup .gtrack{pointer-events:none}
   .pgroup .gbar,.pgroup .gsumlbl,.pgroup .gsumpct,.pgroup .gsumline,.pgroup .gsumfill,
   .pgroup .gexp,.pgroup .gexpw,.pgroup .ear,.pgroup .gdot,.pgroup .gttlout{pointer-events:auto}
@@ -856,6 +857,6 @@
   </div>
 </div>
 
-<script type="module" src="src/app/main.js?v=6ec8f77"></script>
+<script type="module" src="src/app/main.js?v=2daf17e"></script>
 </body>
 </html>
