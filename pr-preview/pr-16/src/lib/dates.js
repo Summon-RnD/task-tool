@@ -1,10 +1,10 @@
-import { LEAD } from "../data/constants.js?v=58a07bf";
-import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=58a07bf";
-import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=58a07bf";
-import { flat, kids } from "./tree.js?v=58a07bf";
-import { taskDone } from "./tree.js?v=58a07bf";
+import { LEAD } from "../data/constants.js?v=5f32ab0";
+import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=5f32ab0";
+import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=5f32ab0";
+import { flat, kids } from "./tree.js?v=5f32ab0";
+import { taskDone } from "./tree.js?v=5f32ab0";
 
-export { dayN, dayIso } from "./date-core.js?v=58a07bf";
+export { dayN, dayIso } from "./date-core.js?v=5f32ab0";
 
 export function createDateHelpers(today, getRoots = () => null) {
   const dayNLocal = (iso) => dayN(iso, today);
@@ -63,13 +63,14 @@ export function createDateHelpers(today, getRoots = () => null) {
       rs = s;
       re = e + 1;
     } else if (e <= 0) {
-      rs = 0;
-      re = 1;
+      // overdue / due today: keep the real start so resize ears work; stretch through today
+      rs = s;
+      re = Math.max(e + 1, 1);
     } else {
       rs = Math.max(s, 0);
       re = e + 1;
     }
-    const cs = Math.max(rs, r0g);
+    const cs = !done && e <= 0 ? rs : Math.max(rs, r0g);
     return [cs, Math.min(Math.max(re, cs + 0.5), r1g)];
   }
 

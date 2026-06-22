@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=58a07bf";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=58a07bf";
+} from "../data/constants.js?v=5f32ab0";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=5f32ab0";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=58a07bf";
-import { createDateHelpers } from "../lib/dates.js?v=58a07bf";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=58a07bf";
+} from "../lib/tree.js?v=5f32ab0";
+import { createDateHelpers } from "../lib/dates.js?v=5f32ab0";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=5f32ab0";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=58a07bf";
-import { startBoardSync } from "../lib/board-sync.js?v=58a07bf";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=58a07bf";
+} from "../lib/capture.js?v=5f32ab0";
+import { startBoardSync } from "../lib/board-sync.js?v=5f32ab0";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=5f32ab0";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -290,9 +290,9 @@ function scheduleTodayRefresh() {
 let TW = 2.2, SPAN_EFFV = SPAN_G + 1.2;
 const uDay=t=>t<0?t:(t<1?t*TW:TW+(t-1));       // day → stretched-day units
 const gx=t=>(uDay(t)-R0G)/SPAN_EFFV*100;       // day → % position on the track
-/* a due date means END of that day, and open work never lives in the past:
+/* a due date means END of that day:
    — done tasks keep their historical span
-   — late and due-today tasks ALL span exactly the today box, ending ON the today line
+   — overdue / due-today tasks show their real start through today so resize ears work
    — future tasks start today at the earliest and end at the end of their due day */
 /* re-renders triggered by clicks are deferred out of the input event: mutating the DOM
    while Chrome is still dispatching the click can wedge its hover/input pipeline
