@@ -1,10 +1,10 @@
-import { LEAD } from "../data/constants.js?v=a8c89ea";
-import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=a8c89ea";
-import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=a8c89ea";
-import { flat, kids, findPath } from "./tree.js?v=a8c89ea";
-import { taskDone } from "./tree.js?v=a8c89ea";
+import { LEAD } from "../data/constants.js?v=e0b31b4";
+import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=e0b31b4";
+import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=e0b31b4";
+import { flat, kids, findPath } from "./tree.js?v=e0b31b4";
+import { taskDone } from "./tree.js?v=e0b31b4";
 
-export { dayN, dayIso } from "./date-core.js?v=a8c89ea";
+export { dayN, dayIso } from "./date-core.js?v=e0b31b4";
 
 export function createDateHelpers(today, getRoots = () => null) {
   const dayNLocal = (iso) => dayN(iso, today);
@@ -85,11 +85,17 @@ export function createDateHelpers(today, getRoots = () => null) {
     return e === -Infinity ? null : { s, e };
   }
 
-  /** Parent tasks use only their own dates/size; subtask edits do not change the bar. */
+  /** Parent task span: own dates/size are the floor; subtasks may only push outward. */
   function rollupSpan(n) {
     const env = childEnvelope(n);
     if (!env) return barSpan(n);
-    if (taskWithSubtasks(n) && n.due) return barSpan(n);
+    if (taskWithSubtasks(n) && n.due) {
+      const own = barSpan(n);
+      return {
+        s: env.s < own.s ? env.s : own.s,
+        e: env.e > own.e ? env.e : own.e,
+      };
+    }
     return env;
   }
 
@@ -106,13 +112,17 @@ export function createDateHelpers(today, getRoots = () => null) {
     leaf.due = dayIsoLocal(newE);
   }
 
-  /** Shorten a subtask that extends past its parent task's due date. */
-  function clipLeafToParentDue(leaf, parent) {
-    if (!parent?.due || kids(leaf).length) return;
-    clampLeafEnd(leaf, dayNLocal(parent.due));
+  /** Grow a parent task's stored dates when subtasks extend past them (never shrink). */
+  function expandParentToFitSubtasks(n) {
+    if (!taskWithSubtasks(n) || !n.due) return;
+    const env = childEnvelope(n);
+    if (!env) return;
+    const own = barSpan(n);
+    const ownS = n.start ? dayNLocal(n.start) : own.s;
+    const ownE = dayNLocal(n.due);
+    if (env.e > ownE) n.due = dayIsoLocal(env.e);
+    if (env.s < ownS) n.start = dayIsoLocal(env.s);
   }
-
-  /** Shorten any subtasks that extend past the parent task's due date. */
   function clipLeavesToParentDue(n) {
     if (!taskWithSubtasks(n) || !n.due) return;
     const maxE = dayNLocal(n.due);
@@ -174,7 +184,7 @@ export function createDateHelpers(today, getRoots = () => null) {
       const roots = getRoots();
       if (roots && n.id) {
         const path = findPath(n.id, roots);
-        if (path?.length === 3) clipLeafToParentDue(n, path[1]);
+        if (path?.length === 3) expandParentToFitSubtasks(path[1]);
       }
       return;
     }
@@ -206,7 +216,7 @@ export function createDateHelpers(today, getRoots = () => null) {
     fmtD,
     commitBarDrag,
     clipLeavesToParentDue,
-    clipLeafToParentDue,
+    expandParentToFitSubtasks,
     taskWithSubtasks,
   };
 }

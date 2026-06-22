@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=a8c89ea";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=a8c89ea";
+} from "../data/constants.js?v=e0b31b4";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=e0b31b4";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=a8c89ea";
-import { createDateHelpers } from "../lib/dates.js?v=a8c89ea";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=a8c89ea";
+} from "../lib/tree.js?v=e0b31b4";
+import { createDateHelpers } from "../lib/dates.js?v=e0b31b4";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=e0b31b4";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=a8c89ea";
-import { startBoardSync } from "../lib/board-sync.js?v=a8c89ea";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=a8c89ea";
+} from "../lib/capture.js?v=e0b31b4";
+import { startBoardSync } from "../lib/board-sync.js?v=e0b31b4";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=e0b31b4";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -238,10 +238,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, expandParentToFitSubtasks;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue } = createDateHelpers(TODAY, () => DATA));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, expandParentToFitSubtasks } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -275,8 +275,8 @@ function scheduleTodayRefresh() {
 }
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
-/* a parent task's bar uses only its own dates/size — subtask edits never change it.
-   Projects still roll up across all descendant leaves. */
+/* a parent task's bar uses its own dates/size but grows when subtasks extend
+   past it — never shrinks. Projects still roll up across all descendant leaves. */
 /* effort weight = working days (Mon–Fri) inside a leaf's bar span, so the team doesn't have
    to size every item — a longer subtask simply weighs more. A set size still counts, because
    size feeds the bar's span via LEAD, which feeds this. Min 1 so a single-day or weekend-only
@@ -896,10 +896,11 @@ function updTask(id,f,v,quiet){ snap(); const path=findPath(id); const n=path.po
   else if(f==="priority") n.priority=v;
   else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due");
     if(path.length===1) clipLeavesToParentDue(n);
-    else if(path.length===2) clipLeafToParentDue(n, path[1]); }
+    else if(path.length===2) expandParentToFitSubtasks(path[1]); }
   else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start");
-    if(path.length===2) clipLeafToParentDue(n, path[1]); }
-  else if(f==="size") n.size=v?normalizeSize(v):null;
+    if(path.length===2) expandParentToFitSubtasks(path[1]); }
+  else if(f==="size"){ n.size=v?normalizeSize(v):null;
+    if(path.length===2) expandParentToFitSubtasks(path[1]); }
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
