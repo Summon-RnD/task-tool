@@ -28,8 +28,9 @@ describe("dates", () => {
     expect(h.barColor(5, 3, true)).toBe("#c8cdd6");
   });
 
-  it("clamps late tasks to the today box", () => {
-    expect(h.barGeom(-3, -1, false)).toEqual([0, 1]);
+  it("shows overdue spans from start through today for resize", () => {
+    expect(h.barGeom(-3, -1, false)).toEqual([-3, 1]);
+    expect(h.barGeom(-2, 0, false)).toEqual([-2, 1]);
   });
 
   it("spanFor tolerates nodes without a children array", () => {
