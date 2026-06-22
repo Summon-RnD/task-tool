@@ -1,6 +1,6 @@
-import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js?v=09b09da";
-import { todayLocalIso } from "./date-core.js?v=09b09da";
-import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js?v=09b09da";
+import { CLIENTS, PEOPLE, TODAY } from "../data/constants.js?v=5d5634f";
+import { todayLocalIso } from "./date-core.js?v=5d5634f";
+import { canonHardware, findClient, inferOwnerByDomain, norm } from "./domain.js?v=5d5634f";
 
 export const cap1 = (s) => (s ? s.replace(/^[a-z]/, (c) => c.toUpperCase()) : s);
 

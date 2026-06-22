@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=09b09da";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=09b09da";
+} from "../data/constants.js?v=5d5634f";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=5d5634f";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=09b09da";
-import { createDateHelpers } from "../lib/dates.js?v=09b09da";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=09b09da";
+} from "../lib/tree.js?v=5d5634f";
+import { createDateHelpers } from "../lib/dates.js?v=5d5634f";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=5d5634f";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=09b09da";
-import { startBoardSync } from "../lib/board-sync.js?v=09b09da";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=09b09da";
+} from "../lib/capture.js?v=5d5634f";
+import { startBoardSync } from "../lib/board-sync.js?v=5d5634f";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=5d5634f";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -275,8 +275,8 @@ function scheduleTodayRefresh() {
 }
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
-/* a parent task's bar spans its own dates/size; subtasks may only extend it outward
-   (never shrink it). Projects still roll up across all descendant leaves. */
+/* a parent task's bar uses only its own dates/size — subtask edits never change it.
+   Projects still roll up across all descendant leaves. */
 /* effort weight = working days (Mon–Fri) inside a leaf's bar span, so the team doesn't have
    to size every item — a longer subtask simply weighs more. A set size still counts, because
    size feeds the bar's span via LEAD, which feeds this. Min 1 so a single-day or weekend-only
