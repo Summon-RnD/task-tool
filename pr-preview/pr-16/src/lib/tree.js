@@ -1,4 +1,4 @@
-import { normalizeSize } from "../data/constants.js?v=2daf17e";
+import { normalizeSize } from "../data/constants.js?v=8d36f2d";
 
 export function createTaskFactory() {
   let uid = 0;
@@ -25,6 +25,17 @@ export function createTaskFactory() {
 }
 
 export const kids = (n) => n.children || [];
+
+/** Sort children (and nested subtasks) by ascending start key; undated items go last. */
+export function sortSubtreeByStart(n, startKey) {
+  const ch = kids(n);
+  if (!ch.length) return;
+  ch.sort((a, b) => {
+    const d = startKey(a) - startKey(b);
+    return d !== 0 ? d : a.title.localeCompare(b.title);
+  });
+  ch.forEach((c) => sortSubtreeByStart(c, startKey));
+}
 
 export const flat = (nodes, fn, depth = 0, path = []) =>
   nodes.forEach((n) => {

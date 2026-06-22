@@ -3,20 +3,21 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=2daf17e";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=2daf17e";
+} from "../data/constants.js?v=8d36f2d";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=8d36f2d";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=2daf17e";
-import { createDateHelpers } from "../lib/dates.js?v=2daf17e";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=2daf17e";
+  sortSubtreeByStart,
+} from "../lib/tree.js?v=8d36f2d";
+import { createDateHelpers } from "../lib/dates.js?v=8d36f2d";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=8d36f2d";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=2daf17e";
-import { startBoardSync } from "../lib/board-sync.js?v=2daf17e";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=2daf17e";
+} from "../lib/capture.js?v=8d36f2d";
+import { startBoardSync } from "../lib/board-sync.js?v=8d36f2d";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=8d36f2d";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -496,9 +497,14 @@ function renderGantt(){
       </button>
       <div class="grow gsumrow" style="min-height:${18+ph+16}px"><div class="gtrack">
         <button class="gsumlbl" style="left:${gx(scs)}%" onpointerdown="projDown(event,${p.id})"
+          oncontextmenu="barContext(event,${p.id},this.getBoundingClientRect())"
           data-full="${p.title} — ${ppc}% done · ${pPts} pts · ${open} open · due ${p.due?fmtD(p.due):"no date"} — click to manage, drag to reorder">${p.title}</button>
-        <div class="gsumline" style="left:${gx(scs)}%;width:${spanW}%;height:${ph}px" onclick="openProjectChart(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
-        <div class="gsumfill" style="left:${gx(scs)}%;width:${spanW*prog}%;height:${ph}px" onclick="openProjectChart(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
+        <div class="gsumline" style="left:${gx(scs)}%;width:${spanW}%;height:${ph}px"
+          onclick="openProjectChart(${p.id})" oncontextmenu="barContext(event,${p.id},this.getBoundingClientRect())"
+          title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
+        <div class="gsumfill" style="left:${gx(scs)}%;width:${spanW*prog}%;height:${ph}px"
+          onclick="openProjectChart(${p.id})" oncontextmenu="barContext(event,${p.id},this.getBoundingClientRect())"
+          title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
         <button type="button" class="gsumpct" style="left:${gx(sce)}%;top:${Math.round(18+ph/2-6)}px" onclick="openProjectChart(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}">${ppc}%</button>
       </div></div>
       ${taskRows}</div>`);
@@ -867,6 +873,11 @@ let BARMENU=null;
 const BM=document.createElement("div"); BM.id="barMenu"; BM.className="barmenu"; document.body.appendChild(BM);
 function openBarMenu(id,anchor){
   const path=findPath(id); if(!path) return; const n=path.pop();
+  const depth=path.length;
+  const sortBtn=(depth===0||depth===1)
+    ? `<button type="button" class="bm-item bm-sort" onclick="sortByStartDate(${id})"
+        title="Reorder ${depth===0?"tasks and subtasks":"subtasks"} by start date">Sort by start date</button>`
+    : "";
   if(anchor&&anchor.getBoundingClientRect) anchor=anchor.getBoundingClientRect();
   if(anchor) BM._anchor={left:anchor.left,right:anchor.right,top:anchor.top,bottom:anchor.bottom};
   const a=BM._anchor||{left:100,right:160,top:100,bottom:130};
@@ -875,7 +886,8 @@ function openBarMenu(id,anchor){
     <div class="bm-chips">${Object.entries(PEOPLE).map(([k,p])=>`<button class="bm-chip ${n.owner===k?'on':''}" title="${p.name}" onclick="updTask(${id},'owner','${k}',true);refreshBarMenu(${id})"><span class="av xs" style="background:${p.color}">${p.initials}</span></button>`).join("")}</div>
     <div class="bm-rw"><span class="bm-lbl">Size</span><span class="szseg">${SIZE_KEYS.map(z=>`<button class="szb ${n.size===z?'on':''}" onclick="updTask(${id},'size','${n.size===z?'':z}',true);refreshBarMenu(${id})">${SIZE_NAMES[z]}</button>`).join("")}</span></div>
     <div class="bm-rw"><span class="bm-lbl">Start</span><input type="date" value="${n.start||''}" onchange="updTask(${id},'start',this.value,true)"></div>
-    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>`;
+    <div class="bm-rw"><span class="bm-lbl">End</span><input type="date" value="${n.due||''}" onchange="updTask(${id},'due',this.value,true)"></div>
+    ${sortBtn}`;
   BM.classList.add("show"); BARMENU=id;
   const mw=BM.offsetWidth||236, mh=BM.offsetHeight||170, gap=8, vw=window.innerWidth, vh=window.innerHeight;
   // sit to the RIGHT of the pill (flip left only if there's no room)
@@ -887,6 +899,19 @@ function openBarMenu(id,anchor){
 }
 function refreshBarMenu(id){ if(BARMENU===id) openBarMenu(id); }
 function closeBarMenu(){ BM.classList.remove("show"); BARMENU=null; }
+function startSortKey(n){
+  const { s }=barSpan(n);
+  return (n.due||n.start)&&!isNaN(s)?s:Infinity;
+}
+function sortByStartDate(id){
+  const path=findPath(id);
+  if(!path||path.length>2) return;
+  snap();
+  sortSubtreeByStart(path[path.length-1], startSortKey);
+  renderAll();
+  ding(1);
+  if(BARMENU===id) refreshBarMenu(id);
+}
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
 function syncTaskDates(n,field){
@@ -1704,7 +1729,7 @@ const _globals = {
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
-  toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
+  toggleExp, updTask, refreshBarMenu, sortByStartDate, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   projDown, rowDown,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
   doSearch, refreshCard, delCapTask, setTask, setTaskOwner, setTaskSize, setSub, setSubOwner, addSub,
