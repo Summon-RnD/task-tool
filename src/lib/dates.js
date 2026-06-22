@@ -1,7 +1,7 @@
 import { LEAD } from "../data/constants.js";
 import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js";
 import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js";
-import { flat, kids, findPath } from "./tree.js";
+import { flat, kids } from "./tree.js";
 import { taskDone } from "./tree.js";
 
 export { dayN, dayIso } from "./date-core.js";
@@ -85,52 +85,15 @@ export function createDateHelpers(today, getRoots = () => null) {
     return e === -Infinity ? null : { s, e };
   }
 
-  /** Parent task span: own dates/size are the floor; subtasks may only push outward. */
+  /** Parent tasks use their own dates on the gantt; projects roll up descendant leaves. */
   function rollupSpan(n) {
     const env = childEnvelope(n);
     if (!env) return barSpan(n);
-    if (taskWithSubtasks(n) && n.due) {
-      const own = barSpan(n);
-      return {
-        s: env.s < own.s ? env.s : own.s,
-        e: env.e > own.e ? env.e : own.e,
-      };
-    }
+    if (taskWithSubtasks(n) && n.due) return barSpan(n);
     return env;
   }
 
   const spanFor = (n) => (kids(n).length ? rollupSpan(n) : barSpan(n));
-
-  function clampLeafEnd(leaf, maxE) {
-    const sp = barSpan(leaf);
-    if (sp.e <= maxE) return;
-    const dur = sp.e - sp.s;
-    let newE = maxE;
-    let newS = newE - dur;
-    if (newS > newE) newS = newE;
-    leaf.start = dayIsoLocal(newS);
-    leaf.due = dayIsoLocal(newE);
-  }
-
-  /** Grow a parent task's stored dates when subtasks extend past them (never shrink). */
-  function expandParentToFitSubtasks(n) {
-    if (!taskWithSubtasks(n) || !n.due) return;
-    const env = childEnvelope(n);
-    if (!env) return;
-    const own = barSpan(n);
-    const ownS = n.start ? dayNLocal(n.start) : own.s;
-    const ownE = dayNLocal(n.due);
-    if (env.e > ownE) n.due = dayIsoLocal(env.e);
-    if (env.s < ownS) n.start = dayIsoLocal(env.s);
-  }
-  function clipLeavesToParentDue(n) {
-    if (!taskWithSubtasks(n) || !n.due) return;
-    const maxE = dayNLocal(n.due);
-    flat([n], (x) => {
-      if (kids(x).length || !x.due) return;
-      clampLeafEnd(x, maxE);
-    });
-  }
 
   function leafWeight(n) {
     const { s, e } = barSpan(n);
@@ -169,7 +132,7 @@ export function createDateHelpers(today, getRoots = () => null) {
     kids(n).forEach((c) => shiftSubtreeDates(c, dd));
   }
 
-  /** Apply a bar move/resize; parent tasks keep their own dates when resized. */
+  /** Apply a bar move/resize; each node's dates change independently except parent moves. */
   function commitBarDrag(n, mode, s, e, s0, e0) {
     if (!kids(n).length) {
       if (mode === "move") {
@@ -180,11 +143,6 @@ export function createDateHelpers(today, getRoots = () => null) {
       } else {
         if (!n.start) n.start = dayIsoLocal(s0);
         n.due = dayIsoLocal(e);
-      }
-      const roots = getRoots();
-      if (roots && n.id) {
-        const path = findPath(n.id, roots);
-        if (path?.length === 3) expandParentToFitSubtasks(path[1]);
       }
       return;
     }
@@ -198,7 +156,6 @@ export function createDateHelpers(today, getRoots = () => null) {
       return;
     }
     n.due = dayIsoLocal(e);
-    clipLeavesToParentDue(n);
   }
 
   return {
@@ -215,8 +172,6 @@ export function createDateHelpers(today, getRoots = () => null) {
     isUrgent,
     fmtD,
     commitBarDrag,
-    clipLeavesToParentDue,
-    expandParentToFitSubtasks,
     taskWithSubtasks,
   };
 }

@@ -37,7 +37,7 @@ describe("dates", () => {
     expect(h.spanFor(leaf).e).toBe(8);
   });
 
-  it("expands a parent task when subtasks extend outside its dates", () => {
+  it("uses a parent task's own span regardless of subtask dates", () => {
     const parent = {
       due: "2026-06-30",
       size: "m",
@@ -46,85 +46,18 @@ describe("dates", () => {
         { due: "2026-06-22", size: "m", children: [] },
       ],
     };
-    const own = h.barSpan(parent);
-    const span = h.rollupSpan(parent);
-    expect(span.e).toBe(own.e);
-    expect(span.s).toBe(h.barSpan(parent.children[0]).s);
-    expect(span.s).toBeLessThan(own.s);
+    expect(h.rollupSpan(parent)).toEqual(h.barSpan(parent));
   });
 
-  it("does not shrink a parent task when subtasks fall inside its dates", () => {
-    const parent = {
-      start: "2026-06-15",
-      due: "2026-06-30",
-      size: "l",
-      children: [{ due: "2026-06-20", size: "s", children: [] }],
-    };
-    const own = h.barSpan(parent);
-    const span = h.spanFor(parent);
-    expect(span.s).toBe(own.s);
-    expect(span.e).toBe(own.e);
-  });
-
-  it("expands the parent task when a subtask due date is moved later", () => {
-    const parent = {
-      due: "2026-06-20",
-      size: "m",
-      children: [{ due: "2026-07-05", size: "s", children: [] }],
-    };
-    const ownE = h.barSpan(parent).e;
-    h.expandParentToFitSubtasks(parent);
-    expect(h.dayN(parent.due)).toBeGreaterThan(ownE);
-    expect(h.spanFor(parent).e).toBe(h.barSpan(parent.children[0]).e);
-  });
-
-  it("expands the parent task start when a subtask begins earlier", () => {
-    const parent = {
-      start: "2026-06-20",
-      due: "2026-06-30",
-      size: "m",
-      children: [{ due: "2026-06-14", size: "s", children: [] }],
-    };
-    h.expandParentToFitSubtasks(parent);
-    expect(h.dayN(parent.start)).toBe(h.barSpan(parent.children[0]).s);
-  });
-
-  it("clips subtasks when a parent task's end date moves earlier", () => {
+  it("does not change subtasks when a parent task due date is edited", () => {
     const parent = {
       due: "2026-06-30",
       size: "m",
       children: [{ due: "2026-07-05", size: "s", children: [] }],
-    };
-    parent.due = "2026-06-22";
-    h.clipLeavesToParentDue(parent);
-    expect(h.dayN(parent.children[0].due)).toBe(h.dayN(parent.due));
-    expect(h.barSpan(parent.children[0]).e).toBe(h.dayN(parent.due));
-  });
-
-  it("does not shrink a parent task when subtasks are moved inward", () => {
-    const parent = {
-      start: "2026-06-10",
-      due: "2026-06-30",
-      size: "m",
-      children: [{ due: "2026-06-20", size: "s", children: [] }],
-    };
-    const dueBefore = parent.due;
-    const startBefore = parent.start;
-    h.expandParentToFitSubtasks(parent);
-    expect(parent.due).toBe(dueBefore);
-    expect(parent.start).toBe(startBefore);
-  });
-
-  it("does not clip subtasks when only the parent start date changes", () => {
-    const parent = {
-      start: "2026-06-20",
-      due: "2026-06-30",
-      size: "m",
-      children: [{ due: "2026-06-14", size: "s", children: [] }],
     };
     const subDue = parent.children[0].due;
-    parent.start = "2026-06-18";
-    h.clipLeavesToParentDue(parent);
+    parent.due = "2026-06-22";
+    h.commitBarDrag(parent, "r", h.barSpan(parent).s, h.dayN("2026-06-22"), h.barSpan(parent).s, h.barSpan(parent).e);
     expect(parent.children[0].due).toBe(subDue);
   });
 
@@ -162,19 +95,12 @@ describe("dates", () => {
     expect(h.spanFor(parent).e).toBe(before.e + 3);
   });
 
-  it("extends only the parent task when its bar is resized on the right", () => {
-    const parent = {
-      due: "2026-06-30",
-      size: "m",
-      children: [
-        { due: "2026-06-14", size: "s", children: [] },
-        { due: "2026-06-22", size: "m", children: [] },
-      ],
-    };
-    const before = h.spanFor(parent);
-    const subDue = parent.children[1].due;
-    h.commitBarDrag(parent, "r", before.s, before.e + 2, before.s, before.e);
-    expect(h.spanFor(parent).e).toBe(before.e + 2);
-    expect(parent.children[1].due).toBe(subDue);
+  it("resizes a leaf bar start and end independently", () => {
+    const leaf = { due: "2026-06-30", start: "2026-06-20", size: "m", children: [] };
+    h.commitBarDrag(leaf, "l", 5, 18, 10, 18);
+    expect(h.dayN(leaf.start)).toBe(5);
+    expect(h.dayN(leaf.due)).toBe(18);
+    h.commitBarDrag(leaf, "r", 5, 12, 5, 18);
+    expect(h.dayN(leaf.due)).toBe(12);
   });
 });
