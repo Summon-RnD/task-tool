@@ -82,9 +82,37 @@ describe("dates", () => {
       children: [{ due: "2026-07-05", size: "s", children: [] }],
     };
     parent.due = "2026-06-22";
-    h.clipLeavesToParentSpan(parent);
-    expect(h.dayN(parent.children[0].due)).toBeLessThanOrEqual(h.dayN(parent.due));
-    expect(h.barSpan(parent.children[0]).e).toBeLessThanOrEqual(h.barSpan(parent).e);
+    h.clipLeavesToParentDue(parent);
+    expect(h.dayN(parent.children[0].due)).toBe(h.dayN(parent.due));
+    expect(h.barSpan(parent.children[0]).e).toBe(h.dayN(parent.due));
+  });
+
+  it("clips a subtask when its due date extends past the parent task", () => {
+    const parent = { due: "2026-06-30", size: "m", children: [] };
+    const sub = { due: "2026-07-05", size: "m", children: [] };
+    h.clipLeafToParentDue(sub, parent);
+    expect(h.dayN(sub.due)).toBe(h.dayN(parent.due));
+  });
+
+  it("does not lengthen a subtask when it ends before the parent task", () => {
+    const parent = { due: "2026-06-30", size: "m", children: [] };
+    const sub = { due: "2026-06-20", size: "s", children: [] };
+    const before = sub.due;
+    h.clipLeafToParentDue(sub, parent);
+    expect(sub.due).toBe(before);
+  });
+
+  it("does not clip subtasks when only the parent start date changes", () => {
+    const parent = {
+      start: "2026-06-20",
+      due: "2026-06-30",
+      size: "m",
+      children: [{ due: "2026-06-14", size: "s", children: [] }],
+    };
+    const subDue = parent.children[0].due;
+    parent.start = "2026-06-18";
+    h.clipLeavesToParentDue(parent);
+    expect(parent.children[0].due).toBe(subDue);
   });
 
   it("still rolls up projects across all descendant leaves", () => {
