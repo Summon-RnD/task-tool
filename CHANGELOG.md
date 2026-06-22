@@ -8,7 +8,7 @@
 - Press Enter in the subtask input on the detail sheet to add a subtask without clicking Add.
 - Detail pop-ups for projects, tasks, and subtasks include a Save button that flushes pending edits, persists, and closes the sheet.
 - Clicking the chart background inside a project opens that project's detail sheet and focuses the new-task input.
-- Bar quick menu on projects and tasks includes **Sort by start date** to reorder tasks/subtasks within the project.
+- Bar quick menu and project/task detail sheet include **Sort by start date** to reorder tasks/subtasks within the project.
 - Projects still roll up dates and size points across all descendant leaves.
 
 ## Rebase PR #14 onto main (2026-06-19)
