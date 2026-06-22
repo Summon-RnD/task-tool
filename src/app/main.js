@@ -238,10 +238,10 @@ function sizeScale(){
 /* chart starts at today - no dead space on the left */
 let ZOOM = 2, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
-  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue;
+  rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, expandParentToFitSubtasks;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, clipLeafToParentDue } = createDateHelpers(TODAY, () => DATA));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag, clipLeavesToParentDue, expandParentToFitSubtasks } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -275,8 +275,8 @@ function scheduleTodayRefresh() {
 }
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
-/* a parent task's bar uses only its own dates/size — subtask edits never change it.
-   Projects still roll up across all descendant leaves. */
+/* a parent task's bar uses its own dates/size but grows when subtasks extend
+   past it — never shrinks. Projects still roll up across all descendant leaves. */
 /* effort weight = working days (Mon–Fri) inside a leaf's bar span, so the team doesn't have
    to size every item — a longer subtask simply weighs more. A set size still counts, because
    size feeds the bar's span via LEAD, which feeds this. Min 1 so a single-day or weekend-only
@@ -896,10 +896,11 @@ function updTask(id,f,v,quiet){ snap(); const path=findPath(id); const n=path.po
   else if(f==="priority") n.priority=v;
   else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due");
     if(path.length===1) clipLeavesToParentDue(n);
-    else if(path.length===2) clipLeafToParentDue(n, path[1]); }
+    else if(path.length===2) expandParentToFitSubtasks(path[1]); }
   else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start");
-    if(path.length===2) clipLeafToParentDue(n, path[1]); }
-  else if(f==="size") n.size=v?normalizeSize(v):null;
+    if(path.length===2) expandParentToFitSubtasks(path[1]); }
+  else if(f==="size"){ n.size=v?normalizeSize(v):null;
+    if(path.length===2) expandParentToFitSubtasks(path[1]); }
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
