@@ -85,16 +85,12 @@ export function createDateHelpers(today, getRoots = () => null) {
     return e === -Infinity ? null : { s, e };
   }
 
-  /** Parent task span: own dates/size win; subtasks may only push the bar outward. */
+  /** Parent tasks use only their own dates/size; subtask edits do not change the bar. */
   function rollupSpan(n) {
     const env = childEnvelope(n);
     if (!env) return barSpan(n);
-    if (!taskWithSubtasks(n) || !n.due) return env;
-    const own = barSpan(n);
-    return {
-      s: env.s < own.s ? env.s : own.s,
-      e: env.e > own.e ? env.e : own.e,
-    };
+    if (taskWithSubtasks(n) && n.due) return barSpan(n);
+    return env;
   }
 
   const spanFor = (n) => (kids(n).length ? rollupSpan(n) : barSpan(n));
@@ -128,13 +124,14 @@ export function createDateHelpers(today, getRoots = () => null) {
     leaf.due = dayIsoLocal(newE);
   }
 
-  /** Shrink subtask dates to fit when a parent task's window narrows. */
+  /** Shrink subtasks that exceed a parent task's explicit start/due bounds. */
   function clipLeavesToParentSpan(n) {
     if (!taskWithSubtasks(n) || !n.due) return;
-    const { s, e } = barSpan(n);
+    const maxE = dayNLocal(n.due);
+    const minS = n.start ? dayNLocal(n.start) : -Infinity;
     flat([n], (x) => {
       if (kids(x).length || !x.due) return;
-      clampLeafToSpan(x, s, e);
+      clampLeafToSpan(x, minS, maxE);
     });
   }
 
@@ -175,15 +172,7 @@ export function createDateHelpers(today, getRoots = () => null) {
     kids(n).forEach((c) => shiftSubtreeDates(c, dd));
   }
 
-  function rollupLeaves(n) {
-    const leaves = [];
-    flat([n], (x) => {
-      if (!kids(x).length && x.due) leaves.push(x);
-    });
-    return leaves;
-  }
-
-  /** Apply a bar move/resize; parent tasks with subtasks shift the rollup envelope. */
+  /** Apply a bar move/resize; parent tasks keep their own dates when resized. */
   function commitBarDrag(n, mode, s, e, s0, e0) {
     if (!kids(n).length) {
       if (mode === "move") {
@@ -203,36 +192,11 @@ export function createDateHelpers(today, getRoots = () => null) {
       return;
     }
     if (mode === "l") {
-      const dd = s - old.s;
-      if (!dd) return;
-      const leaves = rollupLeaves(n);
-      let minS = Infinity;
-      leaves.forEach((l) => {
-        const ls = barSpan(l).s;
-        if (ls < minS) minS = ls;
-      });
-      leaves.forEach((l) => {
-        if (barSpan(l).s !== minS) return;
-        if (l.start) l.start = shiftIso(l.start, dd);
-        else l.due = shiftIso(l.due, dd);
-      });
       n.start = dayIsoLocal(s);
       clipLeavesToParentSpan(n);
       return;
     }
-    const dd = e - old.e;
-    if (!dd) return;
-    const leaves = rollupLeaves(n);
-    let maxE = -Infinity;
-    leaves.forEach((l) => {
-      const le = barSpan(l).e;
-      if (le > maxE) maxE = le;
-    });
-    leaves.forEach((l) => {
-      if (barSpan(l).e === maxE) l.due = shiftIso(l.due, dd);
-    });
     n.due = dayIsoLocal(e);
-    if (!n.start) n.start = dayIsoLocal(old.s);
     clipLeavesToParentSpan(n);
   }
 
