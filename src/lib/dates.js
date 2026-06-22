@@ -6,11 +6,37 @@ import { taskDone } from "./tree.js";
 
 export { dayN, dayIso } from "./date-core.js";
 
-export function createDateHelpers(today) {
+export function createDateHelpers(today, getRoots = () => null) {
   const dayNLocal = (iso) => dayN(iso, today);
   const dayIsoLocal = (d) => dayIso(d, today);
 
   const barSpan = (n) => _barSpan(n, today, LEAD);
+
+  function nodeDepth(n) {
+    const roots = getRoots();
+    if (!roots) return null;
+    let found = null;
+    const walk = (nodes, d) => {
+      for (const x of nodes) {
+        if (x === n) {
+          found = d;
+          return true;
+        }
+        if (walk(kids(x), d + 1)) return true;
+      }
+      return false;
+    };
+    walk(roots, 0);
+    return found;
+  }
+
+  /** True for depth-1 tasks whose children are all subtask leaves. */
+  function taskWithSubtasks(n) {
+    const ch = kids(n);
+    if (!ch.length || !ch.every((c) => !kids(c).length)) return false;
+    const d = nodeDepth(n);
+    return d === null ? true : d === 1;
+  }
 
   function workDays(s, e) {
     if (isNaN(s) || isNaN(e) || e < s) return 0;
@@ -47,7 +73,7 @@ export function createDateHelpers(today) {
     return [cs, Math.min(Math.max(re, cs + 0.5), r1g)];
   }
 
-  function rollupSpan(n) {
+  function childEnvelope(n) {
     let s = Infinity;
     let e = -Infinity;
     flat([n], (x) => {
@@ -56,10 +82,61 @@ export function createDateHelpers(today) {
       if (sp.s < s) s = sp.s;
       if (sp.e > e) e = sp.e;
     });
-    return e === -Infinity ? barSpan(n) : { s, e };
+    return e === -Infinity ? null : { s, e };
+  }
+
+  /** Parent task span: own dates/size win; subtasks may only push the bar outward. */
+  function rollupSpan(n) {
+    const env = childEnvelope(n);
+    if (!env) return barSpan(n);
+    if (!taskWithSubtasks(n) || !n.due) return env;
+    const own = barSpan(n);
+    return {
+      s: env.s < own.s ? env.s : own.s,
+      e: env.e > own.e ? env.e : own.e,
+    };
   }
 
   const spanFor = (n) => (kids(n).length ? rollupSpan(n) : barSpan(n));
+
+  function clampLeafToSpan(leaf, minS, maxE) {
+    const sp = barSpan(leaf);
+    let newS = sp.s;
+    let newE = sp.e;
+    const dur = newE - newS;
+    if (newS < minS) {
+      newS = minS;
+      newE = newS + dur;
+    }
+    if (newE > maxE) {
+      newE = maxE;
+      newS = newE - dur;
+    }
+    if (newS < minS) {
+      newS = minS;
+      newE = Math.min(newS + dur, maxE);
+    }
+    if (newE > maxE) {
+      newE = maxE;
+      newS = Math.max(newE - dur, minS);
+    }
+    if (newS > newE) {
+      newS = minS;
+      newE = maxE;
+    }
+    leaf.start = dayIsoLocal(newS);
+    leaf.due = dayIsoLocal(newE);
+  }
+
+  /** Shrink subtask dates to fit when a parent task's window narrows. */
+  function clipLeavesToParentSpan(n) {
+    if (!taskWithSubtasks(n) || !n.due) return;
+    const { s, e } = barSpan(n);
+    flat([n], (x) => {
+      if (kids(x).length || !x.due) return;
+      clampLeafToSpan(x, s, e);
+    });
+  }
 
   function leafWeight(n) {
     const { s, e } = barSpan(n);
@@ -140,6 +217,7 @@ export function createDateHelpers(today) {
         else l.due = shiftIso(l.due, dd);
       });
       n.start = dayIsoLocal(s);
+      clipLeavesToParentSpan(n);
       return;
     }
     const dd = e - old.e;
@@ -155,6 +233,7 @@ export function createDateHelpers(today) {
     });
     n.due = dayIsoLocal(e);
     if (!n.start) n.start = dayIsoLocal(old.s);
+    clipLeavesToParentSpan(n);
   }
 
   return {
@@ -171,5 +250,7 @@ export function createDateHelpers(today) {
     isUrgent,
     fmtD,
     commitBarDrag,
+    clipLeavesToParentSpan,
+    taskWithSubtasks,
   };
 }

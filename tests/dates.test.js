@@ -48,6 +48,62 @@ describe("dates", () => {
     };
     const span = h.rollupSpan(parent);
     expect(span.s).toBeLessThanOrEqual(span.e);
+    // parent end (Jun 30) wins over subtasks; earliest subtask still extends the left edge
+    expect(span.s).toBe(2);
+    expect(span.e).toBe(18);
+  });
+
+  it("does not shrink a parent task when subtasks fall inside its dates", () => {
+    const parent = {
+      start: "2026-06-15",
+      due: "2026-06-30",
+      size: "l",
+      children: [{ due: "2026-06-20", size: "s", children: [] }],
+    };
+    const own = h.barSpan(parent);
+    const span = h.spanFor(parent);
+    expect(span.s).toBe(own.s);
+    expect(span.e).toBe(own.e);
+  });
+
+  it("expands a parent task when a subtask is scheduled outside its dates", () => {
+    const parent = {
+      due: "2026-06-20",
+      size: "m",
+      children: [{ due: "2026-07-05", size: "s", children: [] }],
+    };
+    const own = h.barSpan(parent);
+    const span = h.spanFor(parent);
+    expect(span.s).toBe(own.s);
+    expect(span.e).toBeGreaterThan(own.e);
+    expect(span.e).toBe(h.barSpan(parent.children[0]).e);
+  });
+
+  it("clips subtasks when a parent task's end date moves earlier", () => {
+    const parent = {
+      due: "2026-06-30",
+      size: "m",
+      children: [{ due: "2026-07-05", size: "s", children: [] }],
+    };
+    parent.due = "2026-06-22";
+    h.clipLeavesToParentSpan(parent);
+    expect(h.dayN(parent.children[0].due)).toBeLessThanOrEqual(h.dayN(parent.due));
+    expect(h.barSpan(parent.children[0]).e).toBeLessThanOrEqual(h.barSpan(parent).e);
+  });
+
+  it("still rolls up projects across all descendant leaves", () => {
+    const project = {
+      due: "2026-07-15",
+      size: "m",
+      children: [
+        { due: "2026-06-14", size: "s", children: [] },
+        { due: "2026-06-22", size: "m", children: [] },
+      ],
+    };
+    const roots = [project];
+    const hp = createDateHelpers(calendarToday(new Date(2026, 5, 12)), () => roots);
+    const span = hp.rollupSpan(project);
+    expect(span.s).toBe(2);
     expect(span.e).toBe(10);
   });
 
