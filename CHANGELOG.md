@@ -4,8 +4,8 @@
 
 ### Changed
 - Parent tasks keep their own t-shirt size in the detail sheet; subtask sizes no longer replace it.
-- Gantt bars for tasks with subtasks use only the task's own dates/size; subtask date edits never change the parent bar.
 - Parent tasks grow when subtasks extend past their dates (including earlier starts and later ends), but never shrink when subtasks move inward. Narrowing a parent due date still clips subtasks.
+- Press Enter in the subtask input on the detail sheet to add a subtask without clicking Add.
 - Projects still roll up dates and size points across all descendant leaves.
 
 ## Rebase PR #14 onto main (2026-06-19)
