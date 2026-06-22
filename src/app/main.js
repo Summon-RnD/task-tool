@@ -489,6 +489,8 @@ function renderGantt(){
     let pPts=0; flat([p],x=>{ if(x.children.length) return; pPts+=sizePts(x.size); });
     const ph=Math.max(7,Math.min(20,Math.round(5+Math.sqrt(pPts)*2.2)));
     rows.push(`<div class="pgroup" data-pid="${p.id}">
+      <div class="pgclick" style="left:${gx(scs)}%;width:${spanW}%"
+        onclick="openProjectChart(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")} — add tasks"></div>
       <div class="grow gsumrow" style="min-height:${18+ph+16}px"><div class="gtrack">
         <button class="gsumlbl" style="left:${gx(scs)}%" onpointerdown="projDown(event,${p.id})"
           data-full="${p.title} — ${ppc}% done · ${pPts} pts · ${open} open · due ${p.due?fmtD(p.due):"no date"} — click to manage, drag to reorder">${p.title}</button>
@@ -973,6 +975,9 @@ function revealGanttTask(id){
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(()=>requestAnimationFrame(run));
   else run();
 }
+function openProjectChart(id){
+  openDetail(id,{focusTask:true,reveal:"bottom"});
+}
 function openDetail(id,opts){
   const path=findPath(id);
   if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
@@ -1036,6 +1041,7 @@ function openDetail(id,opts){
     e.preventDefault();
     addChild(id);
   };
+  if(opts?.focusTask) requestAnimationFrame(()=>document.getElementById("dSubNew")?.focus());
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
@@ -1694,7 +1700,7 @@ const _globals = {
   toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
-  closeTeam, closeSheet, saveDetail, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
+  closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
   toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   projDown, rowDown,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
