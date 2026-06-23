@@ -60,6 +60,9 @@ export const ZOOMS = [
   { l: "Next 6 weeks", s: "+6 weeks", h: 42, v: 42, r0: 0, r1: 41 },
 ];
 
+/** Default timeline zoom: whole team, next week. */
+export const DEFAULT_ZOOM = ZOOMS.findIndex((z) => z.s === "+1 week");
+
 /** Visible gantt day range for a zoom preset (day offsets from today). */
 export function ganttRange(zoom) {
   if (zoom?.r0 != null && zoom?.r1 != null) return { r0: zoom.r0, r1: zoom.r1 };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   barHeight,
+  DEFAULT_ZOOM,
   GBAR_H,
   ganttRange,
   LEAD,
@@ -49,5 +50,10 @@ describe("size constants", () => {
     expect(ganttRange(ZOOMS[3])).toEqual({ r0: 0, r1: 6 });
     expect(ganttRange(ZOOMS[4])).toEqual({ r0: 0, r1: 20 });
     expect(ganttRange(ZOOMS[5])).toEqual({ r0: 0, r1: 41 });
+  });
+
+  it("defaults to the next-week zoom preset", () => {
+    expect(DEFAULT_ZOOM).toBe(3);
+    expect(ZOOMS[DEFAULT_ZOOM].s).toBe("+1 week");
   });
 });
