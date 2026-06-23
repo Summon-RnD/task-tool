@@ -1547,11 +1547,12 @@ function pushApproved(){ if(!PROP) return; snap(); let np=0;
 /* ---- continuous mic: stays live, auto-sends each finished sentence as a turn until you
         stop it. Finished sentences are queued so a slow extract call never drops one. ---- */
 let capQueue=[], speaking=false, micPaused=false;
-function setMic(on){ listening=on; const f=$id("micFab"); if(f) f.classList.toggle("live",on); }
-/* the bottom-right mic is the only mic: tap to open the chat (if needed) and talk; tap again to stop */
+function setMic(on){ listening=on; const v=$id("capVoice"); if(v) v.classList.toggle("live",on); }
+/* bottom-right + opens chat; voice is started from the mic button beside Send */
 function micFabTap(){ const m=$id("vmodal");
-  if(CAP&&m&&m.classList.contains("min")){ restoreCapture(); return; }   // expand instead of toggling mic
-  if(!CAP){ openCapture(); setTimeout(toggleListen,150); } else toggleListen(); }
+  if(CAP&&m&&m.classList.contains("min")){ restoreCapture(); return; }
+  if(!CAP) openCapture();
+  else setTimeout(()=>$id("capInput")?.focus(),50); }
 function pushTurn(text){ capQueue.push(text); drainQueue(); }
 async function drainQueue(){ if(!CAP||CAP.busy) return;
   while(capQueue.length){ $id("capInput").value=capQueue.shift(); await sendTurn(); } }
