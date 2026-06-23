@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=3ef72b7";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=3ef72b7";
+} from "../data/constants.js?v=419f5ae";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=419f5ae";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=3ef72b7";
-import { createDateHelpers } from "../lib/dates.js?v=3ef72b7";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=3ef72b7";
+} from "../lib/tree.js?v=419f5ae";
+import { createDateHelpers } from "../lib/dates.js?v=419f5ae";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=419f5ae";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=3ef72b7";
-import { startBoardSync } from "../lib/board-sync.js?v=3ef72b7";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=3ef72b7";
+} from "../lib/capture.js?v=419f5ae";
+import { startBoardSync } from "../lib/board-sync.js?v=419f5ae";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=419f5ae";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -241,7 +241,7 @@ let dayN, dayIso, barSpan, workDays, barColor, barGeom,
   rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag;
 function syncDateHelpers() {
   ({ dayN, dayIso, barSpan, workDays, barColor, barGeom,
-    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag } = createDateHelpers(TODAY));
+    rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag } = createDateHelpers(TODAY, () => DATA));
 }
 syncDateHelpers();
 
@@ -275,8 +275,8 @@ function scheduleTodayRefresh() {
 }
 /* bars carry only FOUR urgency colors (owner identity is in the bubble) */
 /* vivid, candy-bright status palette (like the reference) */
-/* a parent task's bar always spans its subtasks (start = earliest sub start, due = latest sub due),
-   so a parent can never appear to start after its own subtasks */
+/* a parent task's bar uses its own dates/size; subtask edits do not change it.
+   Projects still roll up across all descendant leaves. */
 /* effort weight = working days (Mon–Fri) inside a leaf's bar span, so the team doesn't have
    to size every item — a longer subtask simply weighs more. A set size still counts, because
    size feeds the bar's span via LEAD, which feeds this. Min 1 so a single-day or weekend-only
@@ -290,9 +290,9 @@ function scheduleTodayRefresh() {
 let TW = 2.2, SPAN_EFFV = SPAN_G + 1.2;
 const uDay=t=>t<0?t:(t<1?t*TW:TW+(t-1));       // day → stretched-day units
 const gx=t=>(uDay(t)-R0G)/SPAN_EFFV*100;       // day → % position on the track
-/* a due date means END of that day, and open work never lives in the past:
+/* a due date means END of that day:
    — done tasks keep their historical span
-   — late and due-today tasks ALL span exactly the today box, ending ON the today line
+   — overdue / due-today tasks show their real start through today so resize ears work
    — future tasks start today at the earliest and end at the end of their due day */
 /* re-renders triggered by clicks are deferred out of the input event: mutating the DOM
    while Chrome is still dispatching the click can wedge its hover/input pipeline
@@ -439,6 +439,7 @@ function renderGantt(){
     const tip=`${n.title} · ${SIZE_NAMES[sz]} · ${fmtD(dayIso(e))}${late?' (late)':''}${hasKids?` · ${donePct}% done`:""}`+(ctx
       ?` — ${ctx.proj}${ctx.parent?" › "+ctx.parent:""} · ${({high:"high",med:"medium",low:"low"})[n.priority||"med"]} priority · ${person(n.owner).name}`
       :"");
+    const startTip=`Start · ${fmtD(dayIso(s))}`, endTip=`End · ${fmtD(dayIso(e))}`;
     return `<div class="grow"><div class="gtrack" data-full="${tip}" style="height:${h+4}px">
         <div class="gbar gsz-${sz} ${done?'gdone':''} ${isSub?'gsub':''}" data-tid="${n.id}" onpointerdown="barDown(event,${n.id},'move')"
           oncontextmenu="barContext(event,${n.id},this.getBoundingClientRect())"
@@ -446,12 +447,12 @@ function renderGantt(){
           style="height:${h}px;left:${gx(tcs)}%;width:${gx(tce)-gx(tcs)}%;${isSub
             ?`background:#fff;border:2px solid ${col};color:${col}`
             :fillBg}">
-          <i class="ear el" onpointerdown="barDown(event,${n.id},'l')"></i>
+          <i class="ear el" data-full="${startTip}" onpointerdown="barDown(event,${n.id},'l')"></i>
           <span class="gava">${av(n.owner,"xs")}</span>
           <span class="ttl">${n.title}</span>
           <button class="gdot ${done?'on':''}" onpointerdown="event.stopPropagation()"
             onclick="event.stopPropagation();ding(4);toggleDone(${n.id})" aria-label="${done?'Undo done':'Mark done'}">${done?'✓':''}</button>
-          <i class="ear er" onpointerdown="barDown(event,${n.id},'r')"></i>
+          <i class="ear er" data-full="${endTip}" onpointerdown="barDown(event,${n.id},'r')"></i>
         </div>${extra?`<div class="gexpw" style="left:calc(${gx(tce)}% + 5px)">${extra}</div>`:""}
         </div></div>`;
   };
@@ -489,12 +490,22 @@ function renderGantt(){
     let pPts=0; flat([p],x=>{ if(x.children.length) return; pPts+=sizePts(x.size); });
     const ph=Math.max(7,Math.min(20,Math.round(5+Math.sqrt(pPts)*2.2)));
     rows.push(`<div class="pgroup" data-pid="${p.id}">
+      <button type="button" class="pgclick" onclick="openProjectChart(${p.id})"
+        title="Open ${p.title.replace(/"/g,"&quot;")} — add tasks"
+        aria-label="Open ${p.title.replace(/"/g,"&quot;")} — add tasks">
+        <span class="pgwash" style="left:${gx(scs)}%;width:${spanW}%"></span>
+      </button>
       <div class="grow gsumrow" style="min-height:${18+ph+16}px"><div class="gtrack">
         <button class="gsumlbl" style="left:${gx(scs)}%" onpointerdown="projDown(event,${p.id})"
+          oncontextmenu="barContext(event,${p.id},this.getBoundingClientRect())"
           data-full="${p.title} — ${ppc}% done · ${pPts} pts · ${open} open · due ${p.due?fmtD(p.due):"no date"} — click to manage, drag to reorder">${p.title}</button>
-        <div class="gsumline" style="left:${gx(scs)}%;width:${spanW}%;height:${ph}px" onclick="openDetail(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
-        <div class="gsumfill" style="left:${gx(scs)}%;width:${spanW*prog}%;height:${ph}px" onclick="openDetail(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
-        <button type="button" class="gsumpct" style="left:${gx(sce)}%;top:${Math.round(18+ph/2-6)}px" onclick="openDetail(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}">${ppc}%</button>
+        <div class="gsumline" style="left:${gx(scs)}%;width:${spanW}%;height:${ph}px"
+          onclick="openProjectChart(${p.id})" oncontextmenu="barContext(event,${p.id},this.getBoundingClientRect())"
+          title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
+        <div class="gsumfill" style="left:${gx(scs)}%;width:${spanW*prog}%;height:${ph}px"
+          onclick="openProjectChart(${p.id})" oncontextmenu="barContext(event,${p.id},this.getBoundingClientRect())"
+          title="Open ${p.title.replace(/"/g,"&quot;")}"></div>
+        <button type="button" class="gsumpct" style="left:${gx(sce)}%;top:${Math.round(18+ph/2-6)}px" onclick="openProjectChart(${p.id})" title="Open ${p.title.replace(/"/g,"&quot;")}">${ppc}%</button>
       </div></div>
       ${taskRows}</div>`);
   });
@@ -884,25 +895,19 @@ function refreshBarMenu(id){ if(BARMENU===id) openBarMenu(id); }
 function closeBarMenu(){ BM.classList.remove("show"); BARMENU=null; }
 document.addEventListener("pointerdown",e=>{ if(BARMENU&&!e.target.closest("#barMenu")) closeBarMenu(); },true);
 
-function syncTaskDates(n,field){
-  if(!n.start||!n.due) return;
-  const s=dayN(n.start), e=dayN(n.due);
-  if(isNaN(s)||isNaN(e)||s<=e) return;
-  if(field==="start") n.due=n.start; else n.start=n.due;
-}
-function updTask(id,f,v,quiet){ snap(); const n=findPath(id).pop();
+function updTask(id,f,v,quiet){ snap(); const path=findPath(id); const n=path.pop();
   if(f==="title") n.title=v.trim()||n.title;
   else if(f==="owner") n.owner=v;
   else if(f==="priority") n.priority=v;
-  else if(f==="due"){ n.due=v||null; syncTaskDates(n,"due"); }
-  else if(f==="start"){ n.start=v||null; syncTaskDates(n,"start"); }
+  else if(f==="due") n.due=v||null;
+  else if(f==="start") n.start=v||null;
   else if(f==="size") n.size=v?normalizeSize(v):null;
   else if(f==="comment") n.comment=v.trim()||null;
   renderAll(); if(!quiet&&f!=="title"&&f!=="comment") openDetail(id); }
 function deleteTask(id){ const n=findPath(id).pop();
   if(typeof confirm!=="undefined"&&!confirm('Delete "'+n.title+'"'+(n.children.length?" and its subtasks":"")+"?")) return;
   snap(); detach(id); closeSheet(); renderAll(); }
-function addChild(id){
+function addChild(id, quiet){
   const el=document.getElementById("dSubNew");
   if(!el) return;
   const v=el.value.trim();
@@ -918,8 +923,29 @@ function addChild(id){
   n.open=true;
   if(path.length>1&&!subOpen(id)){ if(subsAll) COL.delete(id); else EXP.add(id); } // show new subtask rows on the gantt
   renderAll();
+  if(quiet) return child;
   openDetail(id,{reveal:"bottom"});
+  requestAnimationFrame(()=>document.getElementById("dSubNew")?.focus());
   revealGanttTask(child.id);
+}
+function saveDetail(){
+  if(DETAIL_ID==null) return;
+  const id=DETAIL_ID;
+  snap();
+  const path=findPath(id);
+  if(!path) return;
+  const n=path[path.length-1];
+  const titleEl=document.getElementById("dTitle");
+  if(titleEl){ const t=titleEl.value.trim(); if(t) n.title=t; }
+  const commentEl=document.querySelector(".dcomment");
+  if(commentEl) n.comment=commentEl.value.trim()||null;
+  if(document.getElementById("dSubNew")?.value.trim()) addChild(id,true);
+  requestSave();
+  renderAll();
+  const btn=document.querySelector(".dsave");
+  if(btn){ btn.textContent="Saved ✓"; btn.classList.add("saved"); btn.disabled=true; }
+  ding(1);
+  setTimeout(closeSheet,400);
 }
 function addProject(){
   snap();
@@ -948,6 +974,9 @@ function revealGanttTask(id){
   if(typeof requestAnimationFrame!=="undefined") requestAnimationFrame(()=>requestAnimationFrame(run));
   else run();
 }
+function openProjectChart(id){
+  openDetail(id,{focusTask:true,reveal:"bottom"});
+}
 function openDetail(id,opts){
   const path=findPath(id);
   if(!path){ if(DETAIL_ID===id) closeSheet(); DETAIL_ID=null; return; }
@@ -966,10 +995,10 @@ function openDetail(id,opts){
   flat(DATA,(x,depth)=>{ if(contains(n,x.id))return;
     if(depth+1+heightOf(n)>2) return; // keep the 3-level hierarchy
     mopts.push(`<option value="${x.id}" ${x.id===par?'disabled':''}>${"&nbsp;".repeat(depth*3)}${x.title}${x.id===par?" (current)":""}</option>`); });
-  // Size: leaves carry an editable t-shirt size; projects/parent tasks SHOW the rolled-up
-  // point total (sum of their leaves' size points) — not a field the user fills in.
+  // Size: subtasks and parent tasks carry an editable t-shirt size; projects show rolled-up points.
   let _szPts=0; flat([n],x=>{ if(x.children.length) return; _szPts+=sizePts(x.size); });
-  const sizeFld=leaf
+  const sizeEditable=leaf||path.length===2;
+  const sizeFld=sizeEditable
     ? `<div class="frow"><span class="lbl">Size</span><select onchange="updTask(${id},'size',this.value)">
         <option value="">—</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(n.size)===z?'selected':''}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select></div>`
     : `<div class="frow"><span class="lbl">Size</span><span style="flex:1;font-size:15px;font-weight:700;color:var(--ink)">${_szPts} pts</span></div>`;
@@ -989,10 +1018,7 @@ function openDetail(id,opts){
     <div class="frow"><span class="lbl">Move to</span><select onchange="moveTask(${id},this.value)">${mopts.join("")}</select></div>
     ${path.length>=3?"":`<div class="subhdr">${path.length>1?"Subtasks":"Tasks — grip ⠿ to drag onto another project"}</div>`}
     ${n.children.map(ch=>{ const lp=pct(ch), lleaf=!ch.children.length;
-      let _cp=0; flat([ch],x=>{ if(x.children.length) return; _cp+=sizePts(x.size); });
-      const szCtl=lleaf
-        ? `<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`
-        : `<span class="rowpts" title="Rolled up from subtasks">${_cp} pts</span>`;
+      const szCtl=`<select class="rowsz" title="Weight (t-shirt size)" onchange="updTask(${ch.id},'size',this.value,true);openDetail(${id})"><option value="">–</option>${SIZE_KEYS.map(z=>`<option value="${z}" ${normalizeSize(ch.size)===z?"selected":""}>${SIZE_NAMES[z]} · ${SIZE_PTS[z]} pts</option>`).join("")}</select>`;
       return `<div class="ptask" data-cid="${ch.id}">
         <button class="grip2" onpointerdown="rowDown(event,${ch.id})" aria-label="Drag onto a project pill in the timeline">${GRIP_SVG}</button>
         <button class="check ${lleaf?(ch.done?'on':''):(lp===100?'on':'')}" onclick="toggleDone(${ch.id});openDetail(${id})">${(lleaf?ch.done:lp===100)?'✓':''}</button>
@@ -1000,13 +1026,21 @@ function openDetail(id,opts){
         ${ownerPill(ch.owner,`updTask(${ch.id},'owner',this.value,true);openDetail(${id})`)}
         ${szCtl}
         ${dueChip(ch.due,lleaf&&ch.done)}</div>`;}).join("")}
-    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();addChild(${id});}"><button type="button" onclick="addChild(${id})">Add</button></div>`}
+    ${path.length>=3?"":`<div class="subadd" style="margin-top:10px"><input id="dSubNew" placeholder="Add a ${path.length>1?"subtask":"task"}…">
+      <button type="button" onclick="addChild(${id})">Add</button></div>`}
+    <button type="button" class="dsave" onclick="saveDetail()">Save</button>
     <button class="danger" onclick="deleteTask(${id})">Delete ${path.length===1?"project":path.length>=3?"subtask":"task"}</button>`;
   document.getElementById("tmodal").classList.add("show");
   document.getElementById("scrim").classList.add("show");
   if(opts?.reveal) revealDetailScroll(box,opts.reveal);
   else restoreDetailScroll(box,savedScroll);
+  const subNew=document.getElementById("dSubNew");
+  if(subNew) subNew.onkeydown=e=>{
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    addChild(id);
+  };
+  if(opts?.focusTask) requestAnimationFrame(()=>document.getElementById("dSubNew")?.focus());
 }
 function closeSheet(){ DETAIL_ID=null;
   document.getElementById("tmodal").classList.remove("show");
@@ -1547,11 +1581,12 @@ function pushApproved(){ if(!PROP) return; snap(); let np=0;
 /* ---- continuous mic: stays live, auto-sends each finished sentence as a turn until you
         stop it. Finished sentences are queued so a slow extract call never drops one. ---- */
 let capQueue=[], speaking=false, micPaused=false;
-function setMic(on){ listening=on; const f=$id("micFab"); if(f) f.classList.toggle("live",on); }
-/* the bottom-right mic is the only mic: tap to open the chat (if needed) and talk; tap again to stop */
+function setMic(on){ listening=on; const v=$id("capVoice"); if(v) v.classList.toggle("live",on); }
+/* bottom-right + opens chat; voice is started from the mic button beside Send */
 function micFabTap(){ const m=$id("vmodal");
-  if(CAP&&m&&m.classList.contains("min")){ restoreCapture(); return; }   // expand instead of toggling mic
-  if(!CAP){ openCapture(); setTimeout(toggleListen,150); } else toggleListen(); }
+  if(CAP&&m&&m.classList.contains("min")){ restoreCapture(); return; }
+  if(!CAP) openCapture();
+  else setTimeout(()=>$id("capInput")?.focus(),50); }
 function pushTurn(text){ capQueue.push(text); drainQueue(); }
 async function drainQueue(){ if(!CAP||CAP.busy) return;
   while(capQueue.length){ $id("capInput").value=capQueue.shift(); await sendTurn(); } }
@@ -1632,7 +1667,7 @@ function hoverOn(target){
   const key=host.dataset.tid||host.dataset.full;
   if(key!==tipKey){                              // moved onto a new bar → arm the reveal delay
     clearTimeout(tipTimer); tipKey=key; tipEl=host; TIP.style.display="none";
-    tipTimer=setTimeout(revealTip,600); return;
+    tipTimer=setTimeout(revealTip,host.classList.contains("ear")?250:600); return;
   }
   tipEl=host;                                    // same bar (may be a fresh node after a render)
   if(TIP.style.display==="block") placeTip();    // already shown → follow the cursor
@@ -1665,7 +1700,7 @@ const _globals = {
   toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
-  closeTeam, closeSheet, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
+  closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
   toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   projDown, rowDown,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
