@@ -1,4 +1,4 @@
-import { calendarToday } from "../lib/date-core.js?v=ac0d273";
+import { calendarToday } from "../lib/date-core.js?v=53d8575";
 
 export const PEOPLE = {
   jn: { name: "Jean", initials: "JN", color: "#27a468", role: "Finances", al: ["jean"] },
@@ -52,12 +52,12 @@ export const sizePts = (size) => SIZE_PTS[normalizeSize(size)];
 export const barHeight = (size) => GBAR_H[normalizeSize(size)];
 
 export const ZOOMS = [
-  { l: "Last 6 weeks", s: "−6W", h: 42, v: 42, r0: -41, r1: 0 },
-  { l: "Last 3 weeks", s: "−3W", h: 21, v: 21, r0: -20, r1: 0 },
-  { l: "2 weeks back, 3 weeks ahead", s: "−2/+3W", h: 35, v: 36, r0: -14, r1: 21 },
-  { l: "Next week", s: "+1W", h: 7, v: 7, r0: 0, r1: 6 },
-  { l: "Next 3 weeks", s: "+3W", h: 21, v: 21, r0: 0, r1: 20 },
-  { l: "Next 6 weeks", s: "+6W", h: 42, v: 42, r0: 0, r1: 41 },
+  { l: "Last 6 weeks", s: "−6 weeks", h: 42, v: 42, r0: -41, r1: 0 },
+  { l: "Last 3 weeks", s: "−3 weeks", h: 21, v: 21, r0: -20, r1: 0 },
+  { l: "2 weeks back to 3 weeks ahead", s: "−2 wks to +3 wks", h: 35, v: 36, r0: -14, r1: 21 },
+  { l: "Next week", s: "+1 week", h: 7, v: 7, r0: 0, r1: 6 },
+  { l: "Next 3 weeks", s: "+3 weeks", h: 21, v: 21, r0: 0, r1: 20 },
+  { l: "Next 6 weeks", s: "+6 weeks", h: 42, v: 42, r0: 0, r1: 41 },
 ];
 
 /** Visible gantt day range for a zoom preset (day offsets from today). */

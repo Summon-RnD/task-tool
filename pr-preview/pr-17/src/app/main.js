@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX, ganttRange,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=ac0d273";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=ac0d273";
+} from "../data/constants.js?v=53d8575";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=53d8575";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=ac0d273";
-import { createDateHelpers } from "../lib/dates.js?v=ac0d273";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=ac0d273";
+} from "../lib/tree.js?v=53d8575";
+import { createDateHelpers } from "../lib/dates.js?v=53d8575";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=53d8575";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=ac0d273";
-import { startBoardSync } from "../lib/board-sync.js?v=ac0d273";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=ac0d273";
+} from "../lib/capture.js?v=53d8575";
+import { startBoardSync } from "../lib/board-sync.js?v=53d8575";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=53d8575";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -392,8 +392,11 @@ function renderGantt(){
     if(showDaily||dt.getDay()===1||d===0) dticks.push({d,wd:"SMTWTFS"[dt.getDay()],num:dt.getDate(),wknd,today:d===0}); }
   const zoomEl=document.getElementById("gzoom");
   if(zoomEl){
-    if(zoomEl.childElementCount!==ZOOMS.length)
-      zoomEl.innerHTML=ZOOMS.map((z,i)=>`<button title="${z.l}" onclick="setZoom(${i})">${z.s}</button>`).join("");
+    const zoomSig=ZOOMS.map(z=>`${z.s}\0${z.r0}\0${z.r1}`).join("\n");
+    if(zoomEl.dataset.sig!==zoomSig){
+      zoomEl.dataset.sig=zoomSig;
+      zoomEl.innerHTML=ZOOMS.map((z,i)=>`<button type="button" title="${z.l}" onclick="setZoom(${i})">${z.s}</button>`).join("");
+    }
     [...zoomEl.children].forEach((b,i)=>b.classList.toggle("active",ZOOM===i));
   }
   // keep the three toggle pictograms lit in line with their state
