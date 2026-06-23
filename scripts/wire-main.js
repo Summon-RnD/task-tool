@@ -129,7 +129,7 @@ if (!src.includes("function isoCap")) {
 
 const globals = `
 const _globals = {
-  toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
+  toggleSearch, openTeam, micFabTap, openTranscript,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,

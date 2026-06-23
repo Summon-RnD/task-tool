@@ -1144,17 +1144,10 @@ async function sendTurn(){
   renderCapCard(r);
 }
 
-/* ---- sidebar popovers: search (top) and settings (bottom) ---- */
-function closeSidePops(except){ ["sbsearchpop","sbsettingspop"].forEach(id=>{ if(id!==except){ const p=document.getElementById(id); if(p)p.classList.remove("show"); } }); }
+/* ---- sidebar search popover ---- */
+function closeSidePops(except){ const p=document.getElementById("sbsearchpop"); if(p&&"sbsearchpop"!==except) p.classList.remove("show"); }
 function toggleSearch(){ const p=document.getElementById("sbsearchpop"); if(!p)return; closeSidePops("sbsearchpop");
   const open=p.classList.toggle("show"); if(open){ const i=document.getElementById("searchbox"); if(i){i.focus();i.select&&i.select();} } }
-function toggleSettings(){ const p=document.getElementById("sbsettingspop"); if(!p)return; closeSidePops("sbsettingspop");
-  const open=p.classList.toggle("show"); if(open){ const i=document.getElementById("setKeyInput"); if(i)i.value=getKey(); } }
-function closeSettings(){ const p=document.getElementById("sbsettingspop"); if(p)p.classList.remove("show"); }
-/* hide / show the whole left rail; the chart reclaims the space and re-lays out once it settles */
-function toggleSidebar(){ const hidden=document.body.classList.toggle("sbhide"); closeSidePops();
-  const b=document.querySelector(".sbtoggle"); if(b) b.title=hidden?"Show sidebar":"Hide sidebar";
-  placeFloat(); setTimeout(()=>{ if(typeof renderGantt==="function") renderGantt(); placeFloat(); },240); }
 
 /* ---- OpenAI key, kept in this browser session only (never written to the file) ---- */
 let OAI_KEY="";
@@ -1724,7 +1717,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") refreshToday();
 });
 const _globals = {
-  toggleSearch, openTeam, micFabTap, openTranscript, toggleSettings, toggleSidebar, closeSettings,
+  toggleSearch, openTeam, micFabTap, openTranscript,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
   closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
