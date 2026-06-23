@@ -1,5 +1,13 @@
 # Changelog
 
+## Fix board persistence on refresh (2026-06-23)
+
+### Fixed
+- Saved boards are no longer rejected on reload when many tasks lack due dates.
+- Edits made while the board is still loading are flushed to storage once sync is ready.
+- Changes persist in `localStorage` when the `/api/board` backend is unavailable (e.g. GitHub Pages static hosting).
+- Page unload triggers a final save so quick refreshes are less likely to lose work.
+
 ## Past gantt views (2026-06-22)
 
 ### Added

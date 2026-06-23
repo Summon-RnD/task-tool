@@ -6,6 +6,22 @@ import { applyBoard, startBoardSync } from "../src/lib/board-sync.js";
 describe("board-sync", () => {
   const { T, setUid } = createTaskFactory();
 
+  const mockApiFetch = (board) => vi.fn().mockResolvedValue({
+    ok: true,
+    headers: { get: (k) => (k === "content-type" ? "application/json" : null) },
+    json: async () => board,
+  });
+
+  const mockStorage = () => {
+    const store = {};
+    vi.stubGlobal("localStorage", {
+      getItem: (k) => store[k] ?? null,
+      setItem: (k, v) => { store[k] = v; },
+      removeItem: (k) => { delete store[k]; },
+    });
+    return store;
+  };
+
   beforeEach(() => {
     setUid(0);
     Object.assign(PEOPLE, {
@@ -48,6 +64,26 @@ describe("board-sync", () => {
     expect(data[0].title).toBe("Local");
   });
 
+  it("applyBoard accepts saved boards even when many leaves lack due dates", () => {
+    const data = [];
+    const board = {
+      people: { fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Lead", al: [] } },
+      tasks: [
+        T("Project", "fd", {
+          d: "2026-06-20",
+          c: [
+            T("No due 1", "fd", {}),
+            T("No due 2", "fd", {}),
+            T("Has due", "fd", { d: "2026-06-18" }),
+          ],
+        }),
+      ],
+      uid: 5,
+    };
+    expect(applyBoard(board, data, setUid)).toBe(true);
+    expect(data[0].children).toHaveLength(3);
+  });
+
   it("startBoardSync renders once after loading from the server", async () => {
     const data = [];
     const renderAll = vi.fn();
@@ -58,10 +94,7 @@ describe("board-sync", () => {
       uid: 2,
     };
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => board,
-    }));
+    vi.stubGlobal("fetch", mockApiFetch(board));
 
     startBoardSync({ data, getUid: () => 0, setUid, renderAll, onReady, fallback: vi.fn() });
     await vi.waitFor(() => expect(renderAll).toHaveBeenCalledTimes(1));
@@ -76,6 +109,7 @@ describe("board-sync", () => {
     const renderAll = vi.fn();
     const fallback = vi.fn(() => { data.push(T("Fallback project", "fd", { d: "2026-06-20" })); });
 
+    mockStorage();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
     startBoardSync({ data, getUid: () => 0, setUid, renderAll, onReady: () => {}, fallback });
@@ -86,21 +120,42 @@ describe("board-sync", () => {
     vi.unstubAllGlobals();
   });
 
-  it("startBoardSync keeps local edits made while the board is loading", async () => {
+  it("startBoardSync loads from localStorage when the API is unavailable", async () => {
+    const data = [];
+    const renderAll = vi.fn();
+    const onReady = vi.fn();
+    const fallback = vi.fn();
+    const stored = {
+      people: { fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Lead", al: [] } },
+      tasks: [T("Stored project", "fd", { d: "2026-06-20", c: [T("Task", "fd", { d: "2026-06-18" })] })],
+      uid: 2,
+    };
+    const store = mockStorage();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    store.taskboard_board_v1 = JSON.stringify(stored);
+
+    startBoardSync({ data, getUid: () => 0, setUid, renderAll, onReady, fallback });
+    await vi.waitFor(() => expect(renderAll).toHaveBeenCalledTimes(1));
+    expect(data[0]?.title).toBe("Stored project");
+    expect(fallback).not.toHaveBeenCalled();
+    expect(onReady).toHaveBeenCalledOnce();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("startBoardSync saves local edits made while the board is loading", async () => {
     const data = [T("User project", "fd", { d: "2026-06-20" })];
     const renderAll = vi.fn();
     const onReady = vi.fn();
     const fallback = vi.fn();
+    const store = mockStorage();
     const board = {
       people: { fd: { name: "Florian", initials: "FD", color: "#3b6ef6", role: "Lead", al: [] } },
       tasks: [T("Server project", "fd", { d: "2026-06-20", c: [T("Task", "fd", { d: "2026-06-18" })] })],
       uid: 2,
     };
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => board,
-    }));
+    vi.stubGlobal("fetch", mockApiFetch(board));
 
     startBoardSync({
       data,
@@ -116,6 +171,9 @@ describe("board-sync", () => {
     expect(data[0].title).toBe("User project");
     expect(fallback).not.toHaveBeenCalled();
     expect(onReady).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(fetch.mock.calls[1][0]).toBe("/api/board");
+    expect(fetch.mock.calls[1][1]?.method).toBe("PUT");
 
     vi.unstubAllGlobals();
   });
