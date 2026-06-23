@@ -24,25 +24,13 @@
   }
   button{font:inherit;border:none;background:none;color:inherit;cursor:pointer}
 
-  /* ---------- left icon sidebar (collapsible) ---------- */
   body{transition:padding-left .22s ease}
   .sidebar{position:fixed;left:0;top:0;bottom:0;width:62px;background:#191c22;z-index:45;
-           display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 0;
-           transition:transform .22s ease}
-  .sbtoggle{color:#7c828d}
-  body.sbhide{padding-left:0}
-  body.sbhide .sidebar{transform:translateX(-100%)}
-  /* floating reopen button, shown only when the rail is hidden */
-  .sbshow{position:fixed;left:10px;top:12px;z-index:46;width:38px;height:38px;border-radius:11px;
-          background:#191c22;color:#fff;display:none;align-items:center;justify-content:center;
-          box-shadow:0 5px 16px rgba(20,24,35,.32)}
-  .sbshow:hover{background:#23262e}
-  body.sbhide .sbshow{display:flex}
+           display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 0}
   .sblogo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#3b6ef6,#9b8cff);margin-bottom:12px;flex:none}
   .sbicon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#9aa1ac;flex:none}
   .sbicon:hover{background:rgba(255,255,255,.08);color:#fff}
   .sbicon.active{background:rgba(255,255,255,.13);color:#fff}
-  .sbsettings{margin-top:auto}
   .sbpop{position:absolute;z-index:55;display:none;background:var(--surface);border:1px solid var(--line);
          border-radius:14px;box-shadow:0 18px 48px rgba(20,24,35,.26)}
   .sbpop.show{display:block}
@@ -50,16 +38,6 @@
   .sbsearchpop input{width:100%;min-height:42px;border:none;border-radius:11px;background:#eceef2;
          padding:0 15px;font:inherit;font-size:15px;color:var(--ink)}
   .sbsearchpop input:focus{outline:2px solid var(--accent)}
-  .sbsettingspop{left:72px;bottom:14px;width:300px;padding:16px 18px}
-  .sbset-h{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:13px}
-  .sbset-l{display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:6px}
-  .sbsettingspop input{width:100%;min-height:40px;border:1px solid var(--line);border-radius:10px;
-         padding:0 13px;font:inherit;font-size:14px;color:var(--ink);background:#fafbfc}
-  .sbsettingspop input:focus{outline:none;border-color:var(--accent)}
-  .sbset-note{font-size:11.5px;color:var(--ink-3);margin:7px 1px 0}
-  .sbset-btn{margin-top:14px;width:100%;background:#eef0f4;color:var(--ink-2);font-weight:700;
-         font-size:13px;border-radius:10px;padding:10px}
-  .sbset-btn:hover{background:#e4e7ec}
 
   /* ---------- top bar ---------- */
   header{
@@ -614,7 +592,6 @@
     .sblogo{width:26px;height:26px;margin-bottom:8px}
     .sbicon{width:38px;height:38px}
     .sbsearchpop{left:56px;width:min(290px,calc(100vw - 64px))}
-    .sbsettingspop{left:56px;width:min(280px,calc(100vw - 64px))}
     /* the chart fills the screen and scrolls inside itself, like a native app */
     main{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column;
          padding:8px 10px calc(env(safe-area-inset-bottom) + 8px)}
@@ -687,29 +664,13 @@
   <button class="sbicon" title="Process a conversation transcript" onclick="openTranscript()">
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.6" width="12" height="14.8" rx="2"/><path d="M7 6.6h6M7 10h6M7 13.4h3.5"/></svg>
   </button>
-  <button class="sbicon sbsettings" title="Settings" onclick="toggleSettings()">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.6v2.2M10 15.2v2.2M2.6 10h2.2M15.2 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M15.3 4.7l-1.6 1.6M6.3 13.7l-1.6 1.6"/></svg>
-  </button>
-  <button class="sbicon sbtoggle" title="Hide sidebar" onclick="toggleSidebar()">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5l-5 5 5 5"/><path d="M15 5l-5 5 5 5"/></svg>
-  </button>
 
   <div class="sbpop sbsearchpop" id="sbsearchpop">
     <input id="searchbox" placeholder="Search tasks…" oninput="doSearch()"
       onblur="setTimeout(()=>{const b=document.getElementById('searchres');if(b)b.style.display='none';},250)">
     <div id="searchres"></div>
   </div>
-  <div class="sbpop sbsettingspop" id="sbsettingspop">
-    <div class="sbset-h">Settings</div>
-    <label class="sbset-l">OpenAI API key</label>
-    <input id="setKeyInput" type="password" placeholder="sk-…" autocomplete="off" oninput="setKeyVal(this.value)">
-    <div class="sbset-note">Stored only in this browser session, sent only to OpenAI.</div>
-    <button class="sbset-btn" onclick="closeSettings();openTeam()">Manage team photos</button>
-  </div>
 </aside>
-<button class="sbshow" id="sbshow" title="Show sidebar" onclick="toggleSidebar()">
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 6h13M3.5 10h13M3.5 14h13"/></svg>
-</button>
 
 <main>
   <div class="cols">
@@ -860,6 +821,6 @@
   </div>
 </div>
 
-<script type="module" src="src/app/main.js?v=0c79d39"></script>
+<script type="module" src="src/app/main.js?v=58c2c6e"></script>
 </body>
 </html>
