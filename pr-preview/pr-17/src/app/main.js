@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX, ganttRange,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=08f5b52";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=08f5b52";
+} from "../data/constants.js?v=ac0d273";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=ac0d273";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=08f5b52";
-import { createDateHelpers } from "../lib/dates.js?v=08f5b52";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=08f5b52";
+} from "../lib/tree.js?v=ac0d273";
+import { createDateHelpers } from "../lib/dates.js?v=ac0d273";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=ac0d273";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=08f5b52";
-import { startBoardSync } from "../lib/board-sync.js?v=08f5b52";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=08f5b52";
+} from "../lib/capture.js?v=ac0d273";
+import { startBoardSync } from "../lib/board-sync.js?v=ac0d273";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=ac0d273";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -150,7 +150,7 @@ function renderDash(){
       </div>
       <div class="fulcrum" id="fulcrumEl"></div>
     </div>
-    <div class="verdict"><span style="color:var(--red)">late</span> · <span style="color:var(--accent)">due today</span>${HZ>0?` · <span style="color:var(--green)">${ZOOMS[ZOOM].past?(HZ>=182?"last 6 months":"last 3 weeks"):({7:"due this week",21:"due in 3 weeks",42:"due in 6 weeks"})[HZ]}</span>`:""} · <span style="color:var(--ink-3)">${HZ>0?"done this period":"done today"} ✓</span></div>`;
+    <div class="verdict"><span style="color:var(--red)">late</span> · <span style="color:var(--accent)">due today</span>${HZ>0?` · <span style="color:var(--green)">${ZOOMS[ZOOM].l.toLowerCase()}</span>`:""} · <span style="color:var(--ink-3)">${HZ>0?"done this period":"done today"} ✓</span></div>`;
   sizeScale();
   settleScale(lastTilt);   // position pills synchronously, then animate to the new tilt
   if(typeof requestAnimationFrame!=="undefined")
@@ -329,8 +329,11 @@ let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't ju
 let ganttRestoring=false;
 let pageScrollY=0; // window scroll on layouts where .gscroll is horizontal-only
 function setGView(v){ GVIEW=v; defer(renderGantt); }
-let zoomScrollEnd=false, zoomScrollStart=false;
-function setZoom(i){ const next=ZOOMS[i]; ZOOM=i; zoomScrollEnd=!!next.past; zoomScrollStart=!next.past;
+let zoomScrollEnd=false, zoomScrollStart=false, zoomScrollCenter=false;
+function setZoom(i){ const next=ZOOMS[i]; ZOOM=i;
+  zoomScrollEnd=next.r1===0;
+  zoomScrollStart=next.r0===0;
+  zoomScrollCenter=next.r0<0&&next.r1>0;
   setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
 function onGanttScroll(){
   const sc=document.querySelector(".gscroll"); if(!sc) return;
@@ -559,6 +562,10 @@ function renderGantt(){
     if(typeof requestAnimationFrame!=="undefined")
       requestAnimationFrame(()=>{ snapEnd(); requestAnimationFrame(()=>{ snapEnd(); ganttRestoring=false; }); });
     else ganttRestoring=false;
+  } else if(zoomScrollCenter){
+    zoomScrollCenter=false;
+    ganttScroll.left=0;
+    restoreGanttScroll(sc);
   } else if(zoomScrollStart){
     zoomScrollStart=false;
     ganttScroll.left=0;
