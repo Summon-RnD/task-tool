@@ -1,5 +1,13 @@
 # Changelog
 
+## Past gantt views (2026-06-22)
+
+### Added
+- Six timeline zoom presets in order: last 6 weeks, last 3 weeks, 2 weeks back through 3 weeks ahead, next week, next 3 weeks, and next 6 weeks.
+
+### Fixed
+- Merged `main` (ear resize tooltips, mic FAB changes) and kept dynamic `gR0`/`gR1` gantt range from this branch.
+
 ## Draggable start on overdue and due-today bars (2026-06-22)
 
 ### Fixed
