@@ -1,4 +1,4 @@
-import { calendarToday } from "../lib/date-core.js?v=58c2c6e";
+import { calendarToday } from "../lib/date-core.js?v=d51c28f";
 
 export const PEOPLE = {
   jn: { name: "Jean", initials: "JN", color: "#27a468", role: "Finances", al: ["jean"] },
@@ -59,6 +59,9 @@ export const ZOOMS = [
   { l: "Next 3 weeks", s: "+3 weeks", h: 21, v: 21, r0: 0, r1: 20 },
   { l: "Next 6 weeks", s: "+6 weeks", h: 42, v: 42, r0: 0, r1: 41 },
 ];
+
+/** Default timeline zoom: whole team, next week. */
+export const DEFAULT_ZOOM = ZOOMS.findIndex((z) => z.s === "+1 week");
 
 /** Visible gantt day range for a zoom preset (day offsets from today). */
 export function ganttRange(zoom) {

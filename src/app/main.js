@@ -1,22 +1,22 @@
 import {
   PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS,
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
-  R0G, R1G, SPAN_G, TODAY_PX, ganttRange,
+  R0G, R1G, SPAN_G, TODAY_PX, ganttRange, DEFAULT_ZOOM,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=58c2c6e";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=58c2c6e";
+} from "../data/constants.js?v=d51c28f";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=d51c28f";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=58c2c6e";
-import { createDateHelpers } from "../lib/dates.js?v=58c2c6e";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=58c2c6e";
+} from "../lib/tree.js?v=d51c28f";
+import { createDateHelpers } from "../lib/dates.js?v=d51c28f";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=d51c28f";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=58c2c6e";
-import { startBoardSync } from "../lib/board-sync.js?v=58c2c6e";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=58c2c6e";
+} from "../lib/capture.js?v=d51c28f";
+import { startBoardSync } from "../lib/board-sync.js?v=d51c28f";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=d51c28f";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -68,6 +68,22 @@ document.addEventListener("keydown",e=>{
 let lastTilt=0, ownerFilter="all";
 const want=o=>ownerFilter==="all"||o===ownerFilter;
 function setFilter(k){ ownerFilter=k; closeFlyouts(); setTimeout(renderAll,0); }
+function goHome(){
+  closeSidePops();
+  closeFlyouts();
+  closeSheet();
+  ownerFilter="all";
+  GVIEW="proj";
+  showDone=false;
+  focusToday=false;
+  subsAll=false;
+  COL.clear();
+  EXP.clear();
+  ZOOM=DEFAULT_ZOOM;
+  zoomScrollStart=true;
+  ganttScroll.left=0;
+  setTimeout(renderAll,0);
+}
 /* one roll-out open at a time; expandable icons stay lit while their options are out */
 function closeFlyouts(exceptId){
   document.querySelectorAll(".gfctl.open").forEach(c=>{ if(c.id!==exceptId){ c.classList.remove("open");
@@ -236,7 +252,7 @@ function sizeScale(){
    bars. Bar height tracks t-shirt size; each bar has a done-dot (left) and owner bubble
    (right). The window scrolls horizontally; zoom buttons set how many days fit on screen. */
 /* chart starts at today - no dead space on the left */
-let ZOOM = 2, showDone = false;
+let ZOOM = DEFAULT_ZOOM, showDone = false;
 let dayN, dayIso, barSpan, workDays, barColor, barGeom,
   rollupSpan, spanFor, leafWeight, progWD, isUrgent, fmtD, commitBarDrag;
 function syncDateHelpers() {
@@ -1720,7 +1736,7 @@ const _globals = {
   toggleSearch, openTeam, micFabTap, openTranscript,
   toggleFlyout, toggleFocus, toggleShowDone, toggleSubs, closeCapture, toggleCapLang, minimizeCapture,
   sendTurn, restoreCapture, skipKey, saveKey, clearKey, closeTranscript, runTranscript, closeReview,
-  closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
+  closeTeam, closeSheet, saveDetail, openProjectChart, setFilter, goHome, setScaleView, ding, toggleDone, openDetail, setZoom, setGView,
   toggleExp, updTask, refreshBarMenu, addChild, addProject, deleteTask, addCapTask, barDown, barContext, pickSearch,
   projDown, rowDown,
   uploadPhoto, removePhoto, rvToggle, rvText, rvOwner, rvDue, rvSize, pushApproved, attachTranscript,
