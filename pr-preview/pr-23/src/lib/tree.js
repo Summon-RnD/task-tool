@@ -1,4 +1,4 @@
-import { normalizeSize } from "../data/constants.js?v=2a0d186";
+import { normalizeSize } from "../data/constants.js?v=5229970";
 
 export function createTaskFactory() {
   let uid = 0;

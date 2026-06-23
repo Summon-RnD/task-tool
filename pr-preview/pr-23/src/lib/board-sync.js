@@ -1,6 +1,6 @@
-import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=2a0d186";
-import { todayLocalIso } from "./date-core.js?v=2a0d186";
-import { flat, normalizeTaskTree } from "./tree.js?v=2a0d186";
+import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=5229970";
+import { todayLocalIso } from "./date-core.js?v=5229970";
+import { flat, normalizeTaskTree } from "./tree.js?v=5229970";
 
 const BOARD_STORAGE_KEY = "taskboard_board_v1";
 const LOAD_TIMEOUT_MS = 10000;
