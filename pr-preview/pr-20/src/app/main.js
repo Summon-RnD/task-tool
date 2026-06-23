@@ -1,22 +1,22 @@
 import {
   PEOPLE, TODAY, HARDWARE_VOCAB, CLIENTS,
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
-  R0G, R1G, SPAN_G, TODAY_PX,
+  R0G, R1G, SPAN_G, TODAY_PX, ganttRange,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=d2820d1";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=d2820d1";
+} from "../data/constants.js?v=df1f394";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=df1f394";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=d2820d1";
-import { createDateHelpers } from "../lib/dates.js?v=d2820d1";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=d2820d1";
+} from "../lib/tree.js?v=df1f394";
+import { createDateHelpers } from "../lib/dates.js?v=df1f394";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=df1f394";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=d2820d1";
-import { startBoardSync } from "../lib/board-sync.js?v=d2820d1";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=d2820d1";
+} from "../lib/capture.js?v=df1f394";
+import { startBoardSync } from "../lib/board-sync.js?v=df1f394";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=df1f394";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -150,7 +150,7 @@ function renderDash(){
       </div>
       <div class="fulcrum" id="fulcrumEl"></div>
     </div>
-    <div class="verdict"><span style="color:var(--red)">late</span> · <span style="color:var(--accent)">due today</span>${HZ>0?` · <span style="color:var(--green)">${({7:"due this week",21:"due in 3 weeks",42:"due in 6 weeks"})[HZ]}</span>`:""} · <span style="color:var(--ink-3)">${HZ>0?"done this period":"done today"} ✓</span></div>`;
+    <div class="verdict"><span style="color:var(--red)">late</span> · <span style="color:var(--accent)">due today</span>${HZ>0?` · <span style="color:var(--green)">${ZOOMS[ZOOM].l.toLowerCase()}</span>`:""} · <span style="color:var(--ink-3)">${HZ>0?"done this period":"done today"} ✓</span></div>`;
   sizeScale();
   settleScale(lastTilt);   // position pills synchronously, then animate to the new tilt
   if(typeof requestAnimationFrame!=="undefined")
@@ -287,9 +287,9 @@ function scheduleTodayRefresh() {
 /* the today column has a FIXED pixel width at every zoom level; the other days share
    the remaining screen. TW = today's width expressed in "normal day" units, recomputed
    each render from the panel width. */
-let TW = 2.2, SPAN_EFFV = SPAN_G + 1.2;
+let TW = 2.2, SPAN_EFFV = SPAN_G + 1.2, gR0 = 0, gR1 = R1G;
 const uDay=t=>t<0?t:(t<1?t*TW:TW+(t-1));       // day → stretched-day units
-const gx=t=>(uDay(t)-R0G)/SPAN_EFFV*100;       // day → % position on the track
+const gx=t=>(uDay(t)-gR0)/SPAN_EFFV*100;       // day → % position on the track
 /* a due date means END of that day:
    — done tasks keep their historical span
    — overdue / due-today tasks show their real start through today so resize ears work
@@ -329,7 +329,12 @@ let ganttScroll={left:0,top:0}; // preserved across re-renders so edits don't ju
 let ganttRestoring=false;
 let pageScrollY=0; // window scroll on layouts where .gscroll is horizontal-only
 function setGView(v){ GVIEW=v; defer(renderGantt); }
-function setZoom(i){ ZOOM=i; setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
+let zoomScrollEnd=false, zoomScrollStart=false, zoomScrollCenter=false;
+function setZoom(i){ const next=ZOOMS[i]; ZOOM=i;
+  zoomScrollEnd=next.r1===0;
+  zoomScrollStart=next.r0===0;
+  zoomScrollCenter=next.r0<0&&next.r1>0;
+  setTimeout(renderAll,0); }   // drives the scale window and the gantt zoom
 function onGanttScroll(){
   const sc=document.querySelector(".gscroll"); if(!sc) return;
   if(!ganttRestoring){ ganttScroll.left=sc.scrollLeft; ganttScroll.top=sc.scrollTop; }
@@ -366,26 +371,32 @@ function applyBarDrag(n,mode,s,e,s0,e0){
   else { if(!n.start) n.start=dayIso(s0); n.due=dayIso(e); }
 }
 function renderGantt(){
-  const VIS=ZOOMS[ZOOM].v;
+  const zoom=ZOOMS[ZOOM];
+  const VIS=zoom.v;
+  ({ r0: gR0, r1: gR1 } = ganttRange(zoom));
+  const gSpan=gR1-gR0;
   // fixed-width today box: convert TODAY_PX into day units for the current zoom + panel width.
   // On phones the box is narrower so the rest of the timeline isn't squeezed off-screen.
   const TPX=(typeof window!=="undefined"&&window.innerWidth<=740)?150:TODAY_PX;
   const host=document.querySelector(".gscroll")||document.getElementById("gantt");
   const PW=Math.max((host&&host.clientWidth)||0,360);
   const dayPx=Math.max((PW-TPX)/Math.max(VIS-1,1),3);
-  TW=TPX/dayPx; SPAN_EFFV=SPAN_G+(TW-1);
+  TW=TPX/dayPx; SPAN_EFFV=gSpan+(TW-1);
   // calendar axis: month headers + one weekday-letter + number per day (weekly when too tight)
   const showDaily=dayPx>=20;
   const months=[]; let lastM=-1;
-  for(let d=0;d<=R1G;d++){ const dt=parseLocalIso(dayIso(d)), m=dt.getFullYear()*12+dt.getMonth();
+  for(let d=gR0;d<=gR1;d++){ const dt=parseLocalIso(dayIso(d)), m=dt.getFullYear()*12+dt.getMonth();
     if(m!==lastM){ lastM=m; months.push({d,label:dt.toLocaleDateString("en-GB",{month:"short",year:"numeric"})}); } }
   const dticks=[];
-  for(let d=0;d<=R1G;d++){ const dt=parseLocalIso(dayIso(d)), wknd=dt.getDay()%6===0;
+  for(let d=gR0;d<=gR1;d++){ const dt=parseLocalIso(dayIso(d)), wknd=dt.getDay()%6===0;
     if(showDaily||dt.getDay()===1||d===0) dticks.push({d,wd:"SMTWTFS"[dt.getDay()],num:dt.getDate(),wknd,today:d===0}); }
   const zoomEl=document.getElementById("gzoom");
-  if(zoomEl){ // build once; afterwards only toggle classes (keeps the clicked button alive)
-    if(!zoomEl.childElementCount)
-      zoomEl.innerHTML=ZOOMS.map((z,i)=>`<button title="${z.l}" onclick="setZoom(${i})">${["D","1W","3W","6W"][i]}</button>`).join("");
+  if(zoomEl){
+    const zoomSig=ZOOMS.map(z=>`${z.s}\0${z.r0}\0${z.r1}`).join("\n");
+    if(zoomEl.dataset.sig!==zoomSig){
+      zoomEl.dataset.sig=zoomSig;
+      zoomEl.innerHTML=ZOOMS.map((z,i)=>`<button type="button" title="${z.l}" onclick="setZoom(${i})">${z.s}</button>`).join("");
+    }
     [...zoomEl.children].forEach((b,i)=>b.classList.toggle("active",ZOOM===i));
   }
   // keep the three toggle pictograms lit in line with their state
@@ -399,15 +410,15 @@ function renderGantt(){
     [...gv.children].forEach((b,i)=>b.classList.toggle("active",GVIEW===GVKEYS[i]));
   }
   // calendar grid: faint day lines, firmer Monday lines, alternate weeks washed
-  const wk=[0];
-  for(let d=1;d<=R1G;d++) if(parseLocalIso(dayIso(d)).getDay()===1) wk.push(d);
-  wk.push(R1G);
+  const wk=[gR0];
+  for(let d=gR0+1;d<=gR1;d++) if(parseLocalIso(dayIso(d)).getDay()===1) wk.push(d);
+  if(wk[wk.length-1]!==gR1) wk.push(gR1);
   const deco=[];
   for(let i=0;i<wk.length-1;i++) if(i%2===1)
     deco.push(`<div class="gwkband" style="left:${gx(wk[i])}%;width:${gx(wk[i+1])-gx(wk[i])}%"></div>`);
-  for(let d=1;d<R1G;d++){ const mon=parseLocalIso(dayIso(d)).getDay()===1;
+  for(let d=gR0+1;d<gR1;d++){ const mon=parseLocalIso(dayIso(d)).getDay()===1;
     deco.push(`<div class="${mon?'gweek':'gday'}" style="left:${gx(d)}%"></div>`); }
-  months.forEach(m=>{ if(m.d>0) deco.push(`<div class="gmonthline" style="left:${gx(m.d)}%"></div>`); });
+  months.forEach(m=>{ if(m.d>gR0) deco.push(`<div class="gmonthline" style="left:${gx(m.d)}%"></div>`); });
   const td=parseLocalIso(dayIso(0));
   const ord=n=>{const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);};
   const todayStr="Today, "+td.toLocaleDateString("en-GB",{weekday:"long"})+" "+ord(td.getDate())+" "+td.toLocaleDateString("en-GB",{month:"long"});
@@ -415,7 +426,7 @@ function renderGantt(){
   const rows=[deco.join("")+
     `<div class="gband" style="left:${gx(0)}%;width:${gx(1)-gx(0)}%"></div>
     <div class="gribbon">
-    <div class="gmonths">${months.map((m,i)=>{const end=i+1<months.length?months[i+1].d:R1G+1;
+    <div class="gmonths">${months.map((m,i)=>{const end=i+1<months.length?months[i+1].d:gR1+1;
       return `<span class="gmonth" style="left:${(gx(m.d)+gx(end))/2}%">${m.label}</span>`;}).join("")}</div>
     <div class="gtrack gaxis">${dticks.map(t=> t.today
       ? `<span class="gdaylbl today" style="left:${(gx(t.d)+gx(t.d+1))/2}%">${todayStr}</span>`
@@ -426,8 +437,8 @@ function renderGantt(){
   const barRow=(n,extra,isSub,ctx)=>{       // one chart row for a task or a subtask
     if(!n.due) return "";
     const {s,e}=spanFor(n), done=isSub?n.done:taskDone(n);
-    if(e<R0G-14||s>R1G) return "";
-    const late=!done&&e<0, [tcs,tce]=barGeom(s,e,done), sz=normalizeSize(n.size);
+    if(e<gR0-14||s>gR1) return "";
+    const late=!done&&e<0, [tcs,tce]=barGeom(s,e,done,gR0,gR1), sz=normalizeSize(n.size);
     const h=barHeight(sz); // same thickness scale for tasks and subtasks
     // a task with subtasks shows its duration-weighted completion as a darker fill inside its
     // own bar (same two-tone idea as the project summary bar, applied in place)
@@ -474,7 +485,7 @@ function renderGantt(){
     const col=person(p.owner).color;
     // thin summary bar spanning the project's whole task range (earliest start → latest due)
     const sp=rollupSpan(p);
-    const scs=Math.max(sp.s,R0G), sce=Math.max(Math.min(sp.e+1,R1G),scs+0.5);
+    const scs=Math.max(sp.s,gR0), sce=Math.max(Math.min(sp.e+1,gR1),scs+0.5);
     const taskRows=[...p.children]
       .filter(t=>{ let rel=want(t.owner);
         flat([t],x=>{ if(!x.children.length&&want(x.owner)) rel=true; }); return rel; })
@@ -520,7 +531,7 @@ function renderGantt(){
       if((wantTask?taskDone(n):n.done)&&!showDone) return;
       if(!n.due) return;
       const {s,e}=barSpan(n);
-      if(e<R0G-14||s>R1G) return;
+      if(e<gR0-14||s>gR1) return;
       const root=path[0]||n, par=path.length>1?path[path.length-2]:null;
       cand.push({n,e,root,par});
     });
@@ -547,7 +558,23 @@ function renderGantt(){
     `</div></div>`;
   const sc=document.querySelector(".gscroll");
   sc.addEventListener("scroll",onGanttScroll,{passive:true});
-  restoreGanttScroll(sc);
+  if(zoomScrollEnd){
+    zoomScrollEnd=false;
+    ganttRestoring=true;
+    const snapEnd=()=>{ sc.scrollLeft=Math.max(0,sc.scrollWidth-sc.clientWidth); ganttScroll.left=sc.scrollLeft; pinFlags(); };
+    snapEnd();
+    if(typeof requestAnimationFrame!=="undefined")
+      requestAnimationFrame(()=>{ snapEnd(); requestAnimationFrame(()=>{ snapEnd(); ganttRestoring=false; }); });
+    else ganttRestoring=false;
+  } else if(zoomScrollCenter){
+    zoomScrollCenter=false;
+    ganttScroll.left=0;
+    restoreGanttScroll(sc);
+  } else if(zoomScrollStart){
+    zoomScrollStart=false;
+    ganttScroll.left=0;
+    restoreGanttScroll(sc);
+  } else restoreGanttScroll(sc);
   restorePageScroll();
   const gpane=document.querySelector(".gantt");
   if(gpane&&!gpane._floatBound){ gpane._floatBound=true; gpane.addEventListener("scroll",placeFloat,{passive:true}); }
@@ -690,7 +717,7 @@ function barMove(ev){
   else if(G.mode==="l"){ G.s=Math.min(G.s0+dd,G.e0); }
   else { G.e=Math.max(G.e0+dd,G.s0); }
   const done=(G.n.children||[]).length?taskDone(G.n):G.n.done;
-  const [cs,ce]=barGeom(G.s,G.e,done);
+  const [cs,ce]=barGeom(G.s,G.e,done,gR0,gR1);
   G.el.style.left=gx(cs)+"%";
   G.el.style.width=(gx(ce)-gx(cs))+"%";
   if(G.ghost){ G.ghost.style.display=G.moved?"":"none";

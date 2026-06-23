@@ -1,4 +1,4 @@
-import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE } from "../data/constants.js?v=d2820d1";
+import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE } from "../data/constants.js?v=df1f394";
 
 export function norm(s) {
   return " " + (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() + " ";
