@@ -202,7 +202,11 @@
         background-repeat:no-repeat;background-position:right 5px center;background-size:15px}
   .tbox .frow select:hover{background-color:#f0f2f6}
   .tbox .danger{color:var(--red);background:var(--red-soft);border-radius:11px;padding:12px 18px;
-        font-weight:700;font-size:14px;margin-top:18px;width:100%}
+        font-weight:700;font-size:14px;margin-top:10px;width:100%}
+  .tbox .dsave{width:100%;margin-top:18px;padding:12px 18px;border-radius:11px;background:var(--accent);
+        color:#fff;font-weight:700;font-size:15px}
+  .tbox .dsave:active{transform:scale(.98)}
+  .tbox .dsave.saved{background:var(--green)}
   .closex{position:absolute;top:14px;right:16px;width:36px;height:36px;
           border-radius:50%;background:#eef0f4;color:var(--ink-2);font-size:16px;font-weight:700;z-index:1}
   .searchwrap{position:relative;flex:1;max-width:430px}
@@ -278,6 +282,15 @@
   /* project group: a thin summary bar spanning the project's task range, then its tasks */
   .pgroup{position:relative;margin-top:22px;padding:2px 0 8px}
   .pgroup:first-of-type{margin-top:0;padding-top:0}
+  /* clickable project wash — empty chart space opens the project to add tasks */
+  .pgclick{position:absolute;inset:0;z-index:0;cursor:pointer;border:none;padding:0;background:transparent;font:inherit}
+  .pgwash{position:absolute;top:0;bottom:0;background:rgba(59,110,246,.05);border-radius:10px;
+        transition:background .15s;pointer-events:none}
+  .pgclick:hover .pgwash{background:rgba(59,110,246,.1)}
+  .pgroup>.grow{position:relative;z-index:1;pointer-events:none}
+  .pgroup .gtrack{pointer-events:none}
+  .pgroup .gbar,.pgroup .gsumlbl,.pgroup .gsumpct,.pgroup .gsumline,.pgroup .gsumfill,
+  .pgroup .gexp,.pgroup .gexpw,.pgroup .ear,.pgroup .gdot,.pgroup .gttlout{pointer-events:auto}
   /* project header: name on its own line, the progress bar on the line below it */
   /* top-align so the row's extra height (the gap before the first task) stays BELOW the bar,
      instead of being centered and pushing the project name down away from the ribbon */
@@ -844,6 +857,6 @@
   </div>
 </div>
 
-<script type="module" src="src/app/main.js?v=a953afa"></script>
+<script type="module" src="src/app/main.js?v=e7306b7"></script>
 </body>
 </html>

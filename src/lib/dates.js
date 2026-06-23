@@ -1,16 +1,42 @@
-import { LEAD } from "../data/constants.js?v=a953afa";
-import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=a953afa";
-import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=a953afa";
-import { flat, kids } from "./tree.js?v=a953afa";
-import { taskDone } from "./tree.js?v=a953afa";
+import { LEAD } from "../data/constants.js?v=e7306b7";
+import { C_DONE, C_LATE, C_LATER, C_RADAR, C_TODAY } from "../data/constants.js?v=e7306b7";
+import { barSpan as _barSpan, dayIso, dayN, parseLocalIso } from "./date-core.js?v=e7306b7";
+import { flat, kids } from "./tree.js?v=e7306b7";
+import { taskDone } from "./tree.js?v=e7306b7";
 
-export { dayN, dayIso } from "./date-core.js?v=a953afa";
+export { dayN, dayIso } from "./date-core.js?v=e7306b7";
 
-export function createDateHelpers(today) {
+export function createDateHelpers(today, getRoots = () => null) {
   const dayNLocal = (iso) => dayN(iso, today);
   const dayIsoLocal = (d) => dayIso(d, today);
 
   const barSpan = (n) => _barSpan(n, today, LEAD);
+
+  function nodeDepth(n) {
+    const roots = getRoots();
+    if (!roots) return null;
+    let found = null;
+    const walk = (nodes, d) => {
+      for (const x of nodes) {
+        if (x === n) {
+          found = d;
+          return true;
+        }
+        if (walk(kids(x), d + 1)) return true;
+      }
+      return false;
+    };
+    walk(roots, 0);
+    return found;
+  }
+
+  /** True for depth-1 tasks whose children are all subtask leaves. */
+  function taskWithSubtasks(n) {
+    const ch = kids(n);
+    if (!ch.length || !ch.every((c) => !kids(c).length)) return false;
+    const d = nodeDepth(n);
+    return d === null ? true : d === 1;
+  }
 
   function workDays(s, e) {
     if (isNaN(s) || isNaN(e) || e < s) return 0;
@@ -37,17 +63,18 @@ export function createDateHelpers(today) {
       rs = s;
       re = e + 1;
     } else if (e <= 0) {
-      rs = 0;
-      re = 1;
+      // overdue / due today: keep the real start so resize ears work; stretch through today
+      rs = s;
+      re = Math.max(e + 1, 1);
     } else {
       rs = Math.max(s, 0);
       re = e + 1;
     }
-    const cs = Math.max(rs, r0g);
+    const cs = !done && e <= 0 ? rs : Math.max(rs, r0g);
     return [cs, Math.min(Math.max(re, cs + 0.5), r1g)];
   }
 
-  function rollupSpan(n) {
+  function childEnvelope(n) {
     let s = Infinity;
     let e = -Infinity;
     flat([n], (x) => {
@@ -56,7 +83,15 @@ export function createDateHelpers(today) {
       if (sp.s < s) s = sp.s;
       if (sp.e > e) e = sp.e;
     });
-    return e === -Infinity ? barSpan(n) : { s, e };
+    return e === -Infinity ? null : { s, e };
+  }
+
+  /** Parent tasks use their own dates on the gantt; projects roll up descendant leaves. */
+  function rollupSpan(n) {
+    const env = childEnvelope(n);
+    if (!env) return barSpan(n);
+    if (taskWithSubtasks(n) && n.due) return barSpan(n);
+    return env;
   }
 
   const spanFor = (n) => (kids(n).length ? rollupSpan(n) : barSpan(n));
@@ -98,15 +133,7 @@ export function createDateHelpers(today) {
     kids(n).forEach((c) => shiftSubtreeDates(c, dd));
   }
 
-  function rollupLeaves(n) {
-    const leaves = [];
-    flat([n], (x) => {
-      if (!kids(x).length && x.due) leaves.push(x);
-    });
-    return leaves;
-  }
-
-  /** Apply a bar move/resize; parent tasks with subtasks shift the rollup envelope. */
+  /** Apply a bar move/resize; each node's dates change independently except parent moves. */
   function commitBarDrag(n, mode, s, e, s0, e0) {
     if (!kids(n).length) {
       if (mode === "move") {
@@ -126,35 +153,10 @@ export function createDateHelpers(today) {
       return;
     }
     if (mode === "l") {
-      const dd = s - old.s;
-      if (!dd) return;
-      const leaves = rollupLeaves(n);
-      let minS = Infinity;
-      leaves.forEach((l) => {
-        const ls = barSpan(l).s;
-        if (ls < minS) minS = ls;
-      });
-      leaves.forEach((l) => {
-        if (barSpan(l).s !== minS) return;
-        if (l.start) l.start = shiftIso(l.start, dd);
-        else l.due = shiftIso(l.due, dd);
-      });
       n.start = dayIsoLocal(s);
       return;
     }
-    const dd = e - old.e;
-    if (!dd) return;
-    const leaves = rollupLeaves(n);
-    let maxE = -Infinity;
-    leaves.forEach((l) => {
-      const le = barSpan(l).e;
-      if (le > maxE) maxE = le;
-    });
-    leaves.forEach((l) => {
-      if (barSpan(l).e === maxE) l.due = shiftIso(l.due, dd);
-    });
     n.due = dayIsoLocal(e);
-    if (!n.start) n.start = dayIsoLocal(old.s);
   }
 
   return {
@@ -171,5 +173,6 @@ export function createDateHelpers(today) {
     isUrgent,
     fmtD,
     commitBarDrag,
+    taskWithSubtasks,
   };
 }
