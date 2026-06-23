@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=143debb";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=143debb";
+} from "../data/constants.js?v=6dc7c74";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=6dc7c74";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=143debb";
-import { createDateHelpers } from "../lib/dates.js?v=143debb";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=143debb";
+} from "../lib/tree.js?v=6dc7c74";
+import { createDateHelpers } from "../lib/dates.js?v=6dc7c74";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=6dc7c74";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=143debb";
-import { startBoardSync } from "../lib/board-sync.js?v=143debb";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=143debb";
+} from "../lib/capture.js?v=6dc7c74";
+import { startBoardSync } from "../lib/board-sync.js?v=6dc7c74";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=6dc7c74";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -439,6 +439,7 @@ function renderGantt(){
     const tip=`${n.title} · ${SIZE_NAMES[sz]} · ${fmtD(dayIso(e))}${late?' (late)':''}${hasKids?` · ${donePct}% done`:""}`+(ctx
       ?` — ${ctx.proj}${ctx.parent?" › "+ctx.parent:""} · ${({high:"high",med:"medium",low:"low"})[n.priority||"med"]} priority · ${person(n.owner).name}`
       :"");
+    const startTip=`Start · ${fmtD(dayIso(s))}`, endTip=`End · ${fmtD(dayIso(e))}`;
     return `<div class="grow"><div class="gtrack" data-full="${tip}" style="height:${h+4}px">
         <div class="gbar gsz-${sz} ${done?'gdone':''} ${isSub?'gsub':''}" data-tid="${n.id}" onpointerdown="barDown(event,${n.id},'move')"
           oncontextmenu="barContext(event,${n.id},this.getBoundingClientRect())"
@@ -446,12 +447,12 @@ function renderGantt(){
           style="height:${h}px;left:${gx(tcs)}%;width:${gx(tce)-gx(tcs)}%;${isSub
             ?`background:#fff;border:2px solid ${col};color:${col}`
             :fillBg}">
-          <i class="ear el" onpointerdown="barDown(event,${n.id},'l')"></i>
+          <i class="ear el" data-full="${startTip}" onpointerdown="barDown(event,${n.id},'l')"></i>
           <span class="gava">${av(n.owner,"xs")}</span>
           <span class="ttl">${n.title}</span>
           <button class="gdot ${done?'on':''}" onpointerdown="event.stopPropagation()"
             onclick="event.stopPropagation();ding(4);toggleDone(${n.id})" aria-label="${done?'Undo done':'Mark done'}">${done?'✓':''}</button>
-          <i class="ear er" onpointerdown="barDown(event,${n.id},'r')"></i>
+          <i class="ear er" data-full="${endTip}" onpointerdown="barDown(event,${n.id},'r')"></i>
         </div>${extra?`<div class="gexpw" style="left:calc(${gx(tce)}% + 5px)">${extra}</div>`:""}
         </div></div>`;
   };
@@ -1666,7 +1667,7 @@ function hoverOn(target){
   const key=host.dataset.tid||host.dataset.full;
   if(key!==tipKey){                              // moved onto a new bar → arm the reveal delay
     clearTimeout(tipTimer); tipKey=key; tipEl=host; TIP.style.display="none";
-    tipTimer=setTimeout(revealTip,600); return;
+    tipTimer=setTimeout(revealTip,host.classList.contains("ear")?250:600); return;
   }
   tipEl=host;                                    // same bar (may be a fresh node after a render)
   if(TIP.style.display==="block") placeTip();    // already shown → follow the cursor
