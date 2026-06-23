@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX, ganttRange, DEFAULT_ZOOM,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=e50fc71";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=e50fc71";
+} from "../data/constants.js?v=0c0320f";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=0c0320f";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=e50fc71";
-import { createDateHelpers } from "../lib/dates.js?v=e50fc71";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=e50fc71";
+} from "../lib/tree.js?v=0c0320f";
+import { createDateHelpers } from "../lib/dates.js?v=0c0320f";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=0c0320f";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=e50fc71";
-import { startBoardSync } from "../lib/board-sync.js?v=e50fc71";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=e50fc71";
+} from "../lib/capture.js?v=0c0320f";
+import { startBoardSync } from "../lib/board-sync.js?v=0c0320f";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=0c0320f";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
