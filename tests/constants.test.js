@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   barHeight,
   GBAR_H,
+  ganttRange,
   LEAD,
   normalizeSize,
   SIZE_KEYS,
   SIZE_NAMES,
   SIZE_PTS,
   sizePts,
+  ZOOMS,
 } from "../src/data/constants.js";
 
 describe("size constants", () => {
@@ -38,5 +40,14 @@ describe("size constants", () => {
     expect(sizePts(null)).toBe(2);
     expect(barHeight("xs")).toBe(GBAR_H.s);
     expect(barHeight("m")).toBe(barHeight(null));
+  });
+
+  it("maps zoom presets to explicit gantt day ranges", () => {
+    expect(ganttRange(ZOOMS[0])).toEqual({ r0: -41, r1: 0 });
+    expect(ganttRange(ZOOMS[1])).toEqual({ r0: -20, r1: 0 });
+    expect(ganttRange(ZOOMS[2])).toEqual({ r0: -14, r1: 21 });
+    expect(ganttRange(ZOOMS[3])).toEqual({ r0: 0, r1: 6 });
+    expect(ganttRange(ZOOMS[4])).toEqual({ r0: 0, r1: 20 });
+    expect(ganttRange(ZOOMS[5])).toEqual({ r0: 0, r1: 41 });
   });
 });
