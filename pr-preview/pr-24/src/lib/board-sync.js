@@ -1,6 +1,9 @@
-import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=6724da5";
-import { todayLocalIso } from "./date-core.js?v=6724da5";
-import { flat, normalizeTaskTree } from "./tree.js?v=6724da5";
+import { CLIENTS, DOMAIN_RULES, HARDWARE_VOCAB, PEOPLE, TODAY } from "../data/constants.js?v=f21cd9d";
+import { todayLocalIso } from "./date-core.js?v=f21cd9d";
+import { flat, normalizeTaskTree } from "./tree.js?v=f21cd9d";
+
+const BOARD_STORAGE_KEY = "taskboard_board_v1";
+const LOAD_TIMEOUT_MS = 10000;
 
 function maxTaskId(nodes) {
   let m = 0;
@@ -22,19 +25,12 @@ export function boardPayload(data, getUid) {
   };
 }
 
-export function applyBoard(board, data, setUid) {
-  if (!board || typeof board !== "object") return false;
-  if (!board.tasks?.length || !Object.keys(board.people || {}).length) return false;
+function boardShapeOk(board) {
+  return board && typeof board === "object" && board.tasks?.length && Object.keys(board.people || {}).length;
+}
 
-  let leaves = 0;
-  let withDue = 0;
-  flat(board.tasks, (n) => {
-    if (!n.children?.length) {
-      leaves += 1;
-      if (n.due) withDue += 1;
-    }
-  });
-  if (!leaves || withDue < leaves * 0.3) return false;
+export function applyBoard(board, data, setUid) {
+  if (!boardShapeOk(board)) return false;
 
   const peopleKeys = new Set(Object.keys(board.people || {}));
   let badOwner = false;
@@ -64,18 +60,54 @@ export function applyBoard(board, data, setUid) {
   return true;
 }
 
-const LOAD_TIMEOUT_MS = 10000;
+function readStoredBoard() {
+  try {
+    const raw = localStorage.getItem(BOARD_STORAGE_KEY);
+    if (!raw) return null;
+    const board = JSON.parse(raw);
+    return boardShapeOk(board) ? board : null;
+  } catch {
+    return null;
+  }
+}
 
-async function fetchBoard() {
+function writeStoredBoard(board) {
+  try {
+    localStorage.setItem(BOARD_STORAGE_KEY, JSON.stringify(board));
+    return true;
+  } catch (e) {
+    console.error("Board local save failed", e);
+    return false;
+  }
+}
+
+function responseLooksJson(res) {
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("application/json") || ct.includes("text/json");
+}
+
+async function fetchBoardFromApi() {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), LOAD_TIMEOUT_MS);
   try {
     const res = await fetch("/api/board", { signal: ctrl.signal });
-    if (!res.ok) throw new Error("load failed");
-    return await res.json();
+    if (!res.ok || !responseLooksJson(res)) throw new Error("load failed");
+    const board = await res.json();
+    if (!boardShapeOk(board)) throw new Error("invalid board");
+    return board;
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function saveBoardToApi(body) {
+  const res = await fetch("/api/board", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    keepalive: true,
+  });
+  if (!res.ok || !responseLooksJson(res)) throw new Error("save failed");
 }
 
 export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallback, hasLocalEdits }) {
@@ -83,6 +115,7 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
   let saveTimer = null;
   let saveInFlight = false;
   let saveQueued = false;
+  let apiAvailable = true;
 
   const payload = () => boardPayload(data, getUid);
 
@@ -102,6 +135,8 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
     }
   };
 
+  const persistLocal = () => writeStoredBoard(payload());
+
   const doSave = async () => {
     if (!boardReady) return;
     if (saveInFlight) {
@@ -109,15 +144,13 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
       return;
     }
     saveInFlight = true;
+    const body = payload();
+    persistLocal();
     try {
-      const res = await fetch("/api/board", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload()),
-      });
-      if (!res.ok) throw new Error("save failed");
+      if (apiAvailable) await saveBoardToApi(body);
     } catch (e) {
-      console.error("Board save failed", e);
+      apiAvailable = false;
+      console.warn("Board API save unavailable; keeping changes in this browser only.", e);
     } finally {
       saveInFlight = false;
       if (saveQueued) {
@@ -133,13 +166,32 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
     saveTimer = setTimeout(doSave, 500);
   }
 
+  function flushSave() {
+    if (!boardReady) return;
+    clearTimeout(saveTimer);
+    const body = payload();
+    persistLocal();
+    if (apiAvailable) {
+      fetch("/api/board", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        keepalive: true,
+      }).catch(() => { apiAvailable = false; });
+    }
+  }
+
+  const onPageHide = () => flushSave();
+  if (typeof window !== "undefined") window.addEventListener("pagehide", onPageHide);
+
   (async () => {
     let loaded = false;
     let board = null;
     try {
-      board = await fetchBoard();
+      board = await fetchBoardFromApi();
     } catch (e) {
-      console.warn("Board load skipped, using built-in sample data.", e);
+      console.warn("Board API load skipped.", e);
+      apiAvailable = false;
     }
 
     const keepLocal = hasLocalEdits?.() ?? false;
@@ -147,11 +199,22 @@ export function startBoardSync({ data, getUid, setUid, renderAll, onReady, fallb
       console.info("Keeping local edits made while the board was loading.");
     } else if (board) {
       loaded = applyBoard(board, data, setUid);
-      if (!loaded) console.warn("Board from server rejected, using fallback data.");
+      if (!loaded) console.warn("Board from server rejected.");
+    }
+
+    if (!loaded && !keepLocal) {
+      const stored = readStoredBoard();
+      if (stored) loaded = applyBoard(stored, data, setUid);
     }
     if (!loaded && !keepLocal) useFallback();
+
     boardReady = true;
     safeRender();
     onReady(scheduleSave);
+    if (keepLocal || hasLocalEdits?.()) scheduleSave();
   })();
+
+  return () => {
+    if (typeof window !== "undefined") window.removeEventListener("pagehide", onPageHide);
+  };
 }
