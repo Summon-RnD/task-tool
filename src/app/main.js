@@ -3,20 +3,20 @@ import {
   SIZE_KEYS, SIZE_PTS, SIZE_NAMES, LEAD, ZOOMS, GBAR_H, normalizeSize, sizePts, barHeight,
   R0G, R1G, SPAN_G, TODAY_PX,
   C_LATE, C_TODAY, C_RADAR, C_LATER, C_DONE,
-} from "../data/constants.js?v=e7306b7";
-import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=e7306b7";
+} from "../data/constants.js?v=143debb";
+import { inferOwnerByDomain, canonHardware, findClient, buildRespMapText, buildVocabText, norm as _norm } from "../lib/domain.js?v=143debb";
 import {
   createTaskFactory, flat, findPath as findPathIn, counts, pct, taskDone,
   taskDoneAt as taskDoneAtIn, contains, depthOf as depthOfIn, heightOf, fitsDepth as fitsDepthIn,
-} from "../lib/tree.js?v=e7306b7";
-import { createDateHelpers } from "../lib/dates.js?v=e7306b7";
-import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=e7306b7";
+} from "../lib/tree.js?v=143debb";
+import { createDateHelpers } from "../lib/dates.js?v=143debb";
+import { calendarToday, parseLocalIso, todayLocalIso } from "../lib/date-core.js?v=143debb";
 import {
   cap1, stripCaptions, findOwnerId, findDue, findSize,
   normalizeProposal, mockTranscript, isoCap,
-} from "../lib/capture.js?v=e7306b7";
-import { startBoardSync } from "../lib/board-sync.js?v=e7306b7";
-import { buildSampleTasks } from "../data/sample-tasks.js?v=e7306b7";
+} from "../lib/capture.js?v=143debb";
+import { startBoardSync } from "../lib/board-sync.js?v=143debb";
+import { buildSampleTasks } from "../data/sample-tasks.js?v=143debb";
 
 /* ================= sample data ================= */
 /* al = ASR aliases: common Whisper mishearings of each name.
@@ -1580,11 +1580,12 @@ function pushApproved(){ if(!PROP) return; snap(); let np=0;
 /* ---- continuous mic: stays live, auto-sends each finished sentence as a turn until you
         stop it. Finished sentences are queued so a slow extract call never drops one. ---- */
 let capQueue=[], speaking=false, micPaused=false;
-function setMic(on){ listening=on; const f=$id("micFab"); if(f) f.classList.toggle("live",on); }
-/* the bottom-right mic is the only mic: tap to open the chat (if needed) and talk; tap again to stop */
+function setMic(on){ listening=on; const v=$id("capVoice"); if(v) v.classList.toggle("live",on); }
+/* bottom-right + opens chat; voice is started from the mic button beside Send */
 function micFabTap(){ const m=$id("vmodal");
-  if(CAP&&m&&m.classList.contains("min")){ restoreCapture(); return; }   // expand instead of toggling mic
-  if(!CAP){ openCapture(); setTimeout(toggleListen,150); } else toggleListen(); }
+  if(CAP&&m&&m.classList.contains("min")){ restoreCapture(); return; }
+  if(!CAP) openCapture();
+  else setTimeout(()=>$id("capInput")?.focus(),50); }
 function pushTurn(text){ capQueue.push(text); drainQueue(); }
 async function drainQueue(){ if(!CAP||CAP.busy) return;
   while(capQueue.length){ $id("capInput").value=capQueue.shift(); await sendTurn(); } }
